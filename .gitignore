@@ -24,3 +24,7 @@ Midwife back end/__pycache__/
 .vscode/
 .idea/
 *.iml
+
+*.docx
+final_diagrams.zip
+mobile_app_test_cases.md
