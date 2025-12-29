@@ -1,0 +1,26 @@
+# Flutter
+front_end/.dart_tool/
+front_end/.flutter-plugins
+front_end/.flutter-plugins-dependencies
+front_end/build/
+front_end/.pub-cache/
+front_end/.packages
+front_end/pubspec.lock
+
+# Android
+**/android/.gradle
+**/android/local.properties
+**/android/app/build
+**/android/.idea
+
+# Python / FastAPI
+Midwife back end/venv/
+Midwife back end/__pycache__/
+*.pyc
+.env
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.iml
