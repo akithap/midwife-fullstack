@@ -1,0 +1,3 @@
+.so filter=lfs diff=lfs merge=lfs -text
+build/app/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib/**/*.so filter=lfs diff=lfs merge=lfs -text
+*.so filter=lfs diff=lfs merge=lfs -text
