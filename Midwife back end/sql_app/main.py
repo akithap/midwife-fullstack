@@ -696,7 +696,7 @@ def reset_db_smart():
     models.Base.metadata.create_all(bind=engine)
     return {"message": "Database has been RESET for Smart Care Plan features. Please re-seed data."}
 
-@app.get("/seed-dashboard")
+@app.get("/seed-dashboard-v2")
 def seed_dashboard(db: Session = Depends(get_db)):
     midwife = crud.get_midwife_by_username(db, "test_midwife")
     if not midwife:
