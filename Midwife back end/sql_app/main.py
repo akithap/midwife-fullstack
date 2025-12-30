@@ -751,7 +751,7 @@ def seed_dashboard(db: Session = Depends(get_db)):
             ))
         db.commit()
 
-    return {"message": "Seeded Dashboard: 1 Midwife, 5 Mothers, 3 Appointments"}
+    return {"message": "Seeded Dashboard: 1 Midwife, 5 Mothers, 3 Appointments, 1 MOH Officer (moh_admin)"}
 
 # This tells FastAPI: "If someone goes to http://localhost:8000/static/login.html, show them that file."
 app.mount("/static", StaticFiles(directory="static"), name="static")
