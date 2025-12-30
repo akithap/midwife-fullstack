@@ -1,0 +1,14 @@
+{
+    "builds": [
+        {
+            "src": "sql_app/main.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "sql_app/main.py"
+        }
+    ]
+}
