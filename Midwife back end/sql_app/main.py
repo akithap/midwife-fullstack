@@ -710,6 +710,19 @@ def seed_dashboard(db: Session = Depends(get_db)):
         db.add(midwife)
         db.commit()
         db.refresh(midwife)
+
+    # 1.5 Create MOH Officer
+    moh = db.query(models.MOHOfficer).filter(models.MOHOfficer.username == "moh_admin").first()
+    if not moh:
+        moh = models.MOHOfficer(
+            username="moh_admin",
+            hashed_password=crud.get_password_hash("123"),
+            full_name="MOH Admin",
+            moh_area="Colombo",
+            email="moh@admin.com"
+        )
+        db.add(moh)
+        db.commit()
     
     # 2. Add 5 Mothers
     for i in range(1, 6):
