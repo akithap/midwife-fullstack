@@ -16,6 +16,8 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
 # strictly requires "mysql+mysqlconnector://".
 if SQLALCHEMY_DATABASE_URL.startswith("mysql://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("mysql://", "mysql+mysqlconnector://", 1)
+elif SQLALCHEMY_DATABASE_URL.startswith("mysql+pymysql://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("mysql+pymysql://", "mysql+mysqlconnector://", 1)
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
