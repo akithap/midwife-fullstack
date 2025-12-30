@@ -17,6 +17,11 @@ class ApiService {
   // Android Emulator: 10.0.2.2
   static String get _baseUrl {
     if (kIsWeb) {
+      // If deployed (Release Mode), use the Live Backend
+      if (kReleaseMode) {
+        return 'https://midwife-backend-three.vercel.app';
+      }
+      // If debugging locally, use Localhost
       return 'http://127.0.0.1:8000';
     } else {
       // Assuming Android Emulator for mobile testing

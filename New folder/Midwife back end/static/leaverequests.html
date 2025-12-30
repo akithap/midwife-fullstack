@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Requests - Rakawaranaya</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./home.css">
+    <style>
+        /* Polished Styles */
+        .page-header {
+            background: white;
+            padding: 25px 40px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+
+        .page-title h1 {
+            margin: 0;
+            font-size: 28px;
+            color: #1a1a1a;
+        }
+
+        .page-title p {
+            margin: 5px 0 0;
+            color: #666;
+        }
+
+        .tabs {
+            margin: 0 40px 20px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .dashboard-grid {
+            margin: 0 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 5px;
+        }
+
+        .card h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 10px;
+            color: #555;
+            font-size: 14px;
+            align-items: center;
+        }
+
+        .info-row i {
+            width: 16px;
+            color: #999;
+        }
+
+        .actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-approve {
+            flex: 1;
+            padding: 8px;
+            background: #e6f9ed;
+            color: #28a745;
+            border: 1px solid #28a745;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-approve:hover {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-reject {
+            flex: 1;
+            padding: 8px;
+            background: #fdf2f2;
+            color: #dc3545;
+            border: 1px solid #dc3545;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-reject:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px;
+            background: white;
+            border-radius: 12px;
+            border: 1px dashed #ddd;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="header-container">
+            <a href="home.html" class="logo-area">
+                <img src="logo.jpg" alt="Rakawaranaya Logo" class="logo-img">
+                <div class="logo-text">Rakawaranaya<span>Official Portal</span></div>
+            </a>
+            <nav class="nav-links">
+                <a href="home.html" class="nav-link">Home</a>
+                <a href="midwifereg.html" class="nav-link">Midwife Management</a>
+                <a href="leaverequests.html" class="nav-link active">Leave Requests</a>
+                <a href="regform.html" class="nav-link">Register Midwife</a>
+            </nav>
+            <div class="user-menu">
+                <div class="user-avatar" onclick="logout()" style="cursor: pointer;" title="Logout">DR</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content" style="padding:0; background: #f8f9fa; min-height: calc(100vh - 70px);">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Leave Management</h1>
+                <p>Review and process staff leave applications.</p>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('Pending')">Pending Requests</button>
+            <button class="tab-btn" onclick="showTab('Approved')">Approved History</button>
+            <button class="tab-btn" onclick="showTab('Rejected')">Rejected History</button>
+        </div>
+
+        <div id="requestsGrid" class="dashboard-grid">
+            <div class="empty-state">Loading requests...</div>
+        </div>
+    </main>
+
+    <script>
+        const token = localStorage.getItem('moh_token');
+        if (!token) window.location.href = 'login.html';
+
+        function logout() {
+            localStorage.removeItem('moh_token');
+            window.location.href = 'login.html';
+        }
+
+        let allRequests = [];
+        let currentTab = 'Pending';
+        let midwivesMap = {};
+
+        async function loadData() {
+            try {
+                // 1. Fetch Midwives Map (to show names instead of IDs)
+                const mwRes = await fetch('http://127.0.0.1:8000/midwives/', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (mwRes.ok) {
+                    const mws = await mwRes.json();
+                    mws.forEach(m => midwivesMap[m.id] = m.full_name);
+                }
+
+                // 2. Fetch Requests
+                const response = await fetch('http://127.0.0.1:8000/leave-requests/', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (response.status === 401) { logout(); return; }
+                if (response.ok) {
+                    allRequests = await response.json();
+                    renderTab();
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('requestsGrid').innerHTML = '<div class="empty-state">Failed to load data. Ensure backend is running.</div>';
+            }
+        }
+
+        function showTab(status) {
+            currentTab = status;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                // Use includes to match "Pending (Requests)" vs "Pending" key
+                const btnText = btn.innerText;
+                if (status === 'Pending' && btnText.includes('Pending')) btn.classList.add('active');
+                else if (status === 'Approved' && btnText.includes('Approved')) btn.classList.add('active');
+                else if (status === 'Rejected' && btnText.includes('Rejected')) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            renderTab();
+        }
+
+        function renderTab() {
+            const listFn = document.getElementById('requestsGrid');
+            const filtered = allRequests.filter(r => r.status === currentTab);
+
+            if (filtered.length === 0) {
+                listFn.innerHTML = `<div class="empty-state">No ${currentTab.toLowerCase()} requests found.</div>`;
+                return;
+            }
+
+            listFn.innerHTML = filtered.map(req => {
+                const midwifeName = midwivesMap[req.midwife_id] || 'Unknown Midwife (ID: ' + req.midwife_id + ')';
+                const statusClass = 'status-' + req.status.toLowerCase();
+
+                let actions = '';
+                if (req.status === 'Pending') {
+                    actions = `
+                        <div class="actions">
+                            <button onclick="updateStatus(${req.id}, 'Approved')" class="btn-approve"><i class="fas fa-check"></i> Approve</button>
+                            <button onclick="updateStatus(${req.id}, 'Rejected')" class="btn-reject"><i class="fas fa-times"></i> Reject</button>
+                        </div>
+                    `;
+                }
+
+                return `
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user-nurse" style="color:var(--primary-color); margin-right:8px;"></i> ${midwifeName}</h3>
+                        <span class="status-badge ${statusClass}">${req.status}</span>
+                    </div>
+                    
+                    <div class="info-row">
+                        <i class="far fa-calendar-alt"></i>
+                        <span><strong>${req.start_date}</strong> to <strong>${req.end_date}</strong></span>
+                    </div>
+                    
+                    <div class="info-row" style="align-items: flex-start;">
+                        <i class="fas fa-align-left" style="margin-top:4px;"></i>
+                        <span style="line-height: 1.4;">${req.reason}</span>
+                    </div>
+                     ${req.moh_comment ? `<div class="info-row" style="color:#666; font-style:italic;"><i class="fas fa-comment"></i> ${req.moh_comment}</div>` : ''}
+                    
+                    ${actions}
+                </div>
+                `;
+            }).join('');
+        }
+
+        async function updateStatus(id, status) {
+            if (!confirm(`Are you sure you want to ${status} this request?`)) return;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/leave-requests/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: status, moh_comment: 'Processed via Portal' })
+                });
+                if (response.ok) {
+                    loadData();
+                } else {
+                    alert('Failed to update');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        loadData();
+    </script>
+</body>
+
+</html>
