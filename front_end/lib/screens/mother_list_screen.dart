@@ -4,6 +4,8 @@ import 'register_mother_screen.dart';
 import '../models/mother.dart';
 import 'mother_care_screen.dart';
 import 'dart:async'; // Import needed for 'Timer'
+import 'chat_screen.dart';
+import '../enums/user_role.dart';
 
 class MotherListScreen extends StatefulWidget {
   @override
@@ -61,10 +63,11 @@ class _MotherListScreenState extends State<MotherListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('Registered Mothers'),
-        backgroundColor: Colors.teal,
+        // backgroundColor: Colors.teal, // Handled by theme
       ),
       body: Column(
         children: [
@@ -109,6 +112,7 @@ class _MotherListScreenState extends State<MotherListScreen> {
 
                   final mothers = snapshot.data!;
                   return ListView.builder(
+                    padding: EdgeInsets.only(bottom: 80), // Prevent FAB overlap
                     itemCount: mothers.length,
                     itemBuilder: (context, index) {
                       final mother = mothers[index];
@@ -119,11 +123,18 @@ class _MotherListScreenState extends State<MotherListScreen> {
                         ),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Colors.teal.shade100,
+                            // Dynamic color with opacity
+                            backgroundColor: theme.primaryColor.withOpacity(
+                              0.2,
+                            ),
                             child: Text(
                               mother.fullName.isNotEmpty
                                   ? mother.fullName[0].toUpperCase()
                                   : '?',
+                              style: TextStyle(
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           title: Text(
@@ -142,10 +153,14 @@ class _MotherListScreenState extends State<MotherListScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: mother.status == 'Pregnant'
-                                      ? Colors.pinkAccent.shade100
+                                      ? Colors.pinkAccent.withOpacity(
+                                          0.2,
+                                        ) // Softer for dark mode
                                       : mother.status == 'Postnatal'
-                                      ? Colors.green.shade100
-                                      : Colors.grey.shade200,
+                                      ? Colors.green.withOpacity(0.2)
+                                      : theme.disabledColor.withOpacity(
+                                          0.2,
+                                        ), // Default grey adjusted
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -153,6 +168,12 @@ class _MotherListScreenState extends State<MotherListScreen> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
+                                    // Ensure text is readable on the background
+                                    color: mother.status == 'Pregnant'
+                                        ? Colors.pinkAccent
+                                        : mother.status == 'Postnatal'
+                                        ? Colors.green
+                                        : theme.textTheme.bodySmall?.color,
                                   ),
                                 ),
                               ),
@@ -182,10 +203,35 @@ class _MotherListScreenState extends State<MotherListScreen> {
                               ],
                             ],
                           ),
-                          trailing: IconButton(
-                            icon: Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () =>
-                                _navigateToRegister(mother: mother),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.chat_bubble_outline,
+                                  color: Colors.blueAccent,
+                                ),
+                                tooltip: 'Chat',
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ChatScreen(
+                                        otherUserId: mother.id,
+                                        otherUserName: mother.fullName,
+                                        myRole: UserRole.midwife,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.grey),
+                                tooltip: 'Edit',
+                                onPressed: () =>
+                                    _navigateToRegister(mother: mother),
+                              ),
+                            ],
                           ),
                           onTap: () {
                             Navigator.push(
@@ -210,7 +256,7 @@ class _MotherListScreenState extends State<MotherListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateToRegister(),
-        backgroundColor: Colors.teal,
+        backgroundColor: theme.primaryColor, // Use theme primary
         child: Icon(Icons.person_add),
         tooltip: 'Register New Mother',
       ),

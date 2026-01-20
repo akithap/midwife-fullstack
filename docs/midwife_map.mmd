@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    actor Midwife
+    participant App as Mobile App (Frontend)
+    participant API as Backend API
+    participant DB as Database
+
+    Midwife->>App: Open App
+    Midwife->>App: Login(username, password)
+    activate App
+    App->>API: POST /token
+    activate API
+    
+    API->>DB: Validate Midwife
+    DB-->>API: Valid
+    API-->>App: 200 OK (Token)
+    deactivate API
+    
+    App-->>Midwife: View Dashboard
+    deactivate App
+
+    Midwife->>App: Click "Map" (Bottom Nav)
+    activate App
+    App->>API: GET /mothers/ (Fetch Locations)
+    activate API
+    API->>DB: Query Mothers with Lat/Lng
+    DB-->>API: Return Mothers List
+    API-->>App: List[Mother]
+    deactivate API
+    
+    App->>App: Render Markers on Map
+    App-->>Midwife: Load Map Interface
+    deactivate App

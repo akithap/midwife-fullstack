@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, TEXT, DECIMAL, DATETIME, Boolean, Date
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Date, TEXT, Time, DECIMAL, DateTime
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime
@@ -19,14 +19,18 @@ class Midwife(Base):
     residential_address = Column(TEXT)
     slmc_reg_no = Column(String(50))
     service_grade = Column(String(50))
-    assigned_moh_area = Column(String(100))
-    is_active = Column(Boolean, default=True) # For suspension
+    
+    # Structure Fix: Link to Office ID
+    moh_office_id = Column(Integer, ForeignKey("moh_offices.id"), nullable=True)
+    assigned_moh_area = Column(String(100)) # Keep for legacy check
     
     is_active = Column(Boolean, default=True) # For suspension
+    created_at = Column(DateTime, default=datetime.utcnow)
     
     mothers = relationship("Mother", back_populates="owner")
     appointments = relationship("Appointment", back_populates="midwife")
     leave_requests = relationship("LeaveRequest", back_populates="midwife")
+    office = relationship("MOHOffice", back_populates="midwives")
 
 class Mother(Base):
     __tablename__ = "mothers"
@@ -36,6 +40,11 @@ class Mother(Base):
     address = Column(TEXT)
     contact_number = Column(String(20))
     hashed_password = Column(String(255), nullable=False)
+    
+    # Geolocation
+    latitude = Column(DECIMAL(9, 6), nullable=True)
+    longitude = Column(DECIMAL(9, 6), nullable=True)
+
     midwife_id = Column(Integer, ForeignKey("midwives.id"), nullable=False)
     
     # Smart Care Plan Fields
@@ -54,6 +63,7 @@ class Mother(Base):
     appointments = relationship("Appointment", back_populates="mother")
     anc_visits = relationship("ANCVisit", back_populates="mother")
     pnc_visits = relationship("PNCVisit", back_populates="mother")
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class ANCVisit(Base):
     __tablename__ = "anc_visits"
@@ -124,7 +134,7 @@ class PNCVisit(Base):
 class HealthRecord(Base):
     __tablename__ = "health_records"
     id = Column(Integer, primary_key=True, index=True)
-    visit_date = Column(DATETIME, nullable=False)
+    visit_date = Column(DateTime, nullable=False)
     weight_kg = Column(DECIMAL(5, 2))
     blood_pressure = Column(String(20))
     notes = Column(TEXT)
@@ -135,7 +145,7 @@ class PregnancyRecord(Base):
     __tablename__ = "pregnancy_records"
     id = Column(Integer, primary_key=True, index=True)
     mother_id = Column(Integer, ForeignKey("mothers.id"), nullable=False)
-    created_at = Column(DATETIME)
+    created_at = Column(DateTime)
     
     # Registration Details
     registration_no = Column(String(50))
@@ -144,6 +154,8 @@ class PregnancyRecord(Base):
     family_register_no = Column(String(50))
     village_division = Column(String(100))
     moh_division = Column(String(100))
+    moh_province = Column(String(100)) # NEW: Province
+    moh_district = Column(String(100)) # NEW: District
     phi_area = Column(String(100))
     
     # Personal Info (Mother)
@@ -209,7 +221,7 @@ class PregnancyRecord(Base):
     # Decision: For MVP, maybe JSON string or 6 fixed columns?
     # Let's stick to the current basic Past History fields unless user asks for tabular entry.
     
-    created_at = Column(DATETIME)
+    created_at = Column(DateTime)
     
     # Relationship
     mother = relationship("Mother", back_populates="pregnancy_records")
@@ -235,10 +247,10 @@ class DeliveryRecord(Base):
     __tablename__ = "delivery_records"
     id = Column(Integer, primary_key=True, index=True)
     mother_id = Column(Integer, ForeignKey("mothers.id"), nullable=False)
-    created_at = Column(DATETIME)
+    created_at = Column(DateTime)
     
     # Delivery
-    delivery_date = Column(DATETIME)
+    delivery_date = Column(DateTime)
     delivery_mode = Column(String(50))
     episiotomy = Column(Boolean, default=False)
     temp_normal = Column(Boolean, default=False)
@@ -264,7 +276,7 @@ class DeliveryRecord(Base):
     prescription_given = Column(Boolean, default=False)
     referred_to_phm = Column(Boolean, default=False)
     special_notes = Column(TEXT)
-    discharge_date = Column(DATETIME)
+    discharge_date = Column(DateTime)
     
     mother = relationship("Mother", back_populates="delivery_records")
 
@@ -272,33 +284,33 @@ class AntenatalPlan(Base):
     __tablename__ = "antenatal_plans"
     id = Column(Integer, primary_key=True, index=True)
     mother_id = Column(Integer, ForeignKey("mothers.id"), nullable=False)
-    created_at = Column(DATETIME)
+    created_at = Column(DateTime)
     
-    next_clinic_date = Column(DATETIME)
+    next_clinic_date = Column(DateTime)
     
-    class_1st_date = Column(DATETIME)
+    class_1st_date = Column(DateTime)
     class_1st_husband = Column(Boolean, default=False)
     class_1st_wife = Column(Boolean, default=False)
     class_1st_other = Column(String(100))
     
-    class_2nd_date = Column(DATETIME)
+    class_2nd_date = Column(DateTime)
     class_2nd_husband = Column(Boolean, default=False)
     class_2nd_wife = Column(Boolean, default=False)
     class_2nd_other = Column(String(100))
     
-    class_3rd_date = Column(DATETIME)
+    class_3rd_date = Column(DateTime)
     class_3rd_husband = Column(Boolean, default=False)
     class_3rd_wife = Column(Boolean, default=False)
     class_3rd_other = Column(String(100))
     
-    book_antenatal_issued = Column(DATETIME)
-    book_antenatal_returned = Column(DATETIME)
-    book_breastfeeding_issued = Column(DATETIME)
-    book_breastfeeding_returned = Column(DATETIME)
-    book_eccd_issued = Column(DATETIME)
-    book_eccd_returned = Column(DATETIME)
-    leaflet_fp_issued = Column(DATETIME)
-    leaflet_fp_returned = Column(DATETIME)
+    book_antenatal_issued = Column(DateTime)
+    book_antenatal_returned = Column(DateTime)
+    book_breastfeeding_issued = Column(DateTime)
+    book_breastfeeding_returned = Column(DateTime)
+    book_eccd_issued = Column(DateTime)
+    book_eccd_returned = Column(DateTime)
+    leaflet_fp_issued = Column(DateTime)
+    leaflet_fp_returned = Column(DateTime)
     
     emergency_contact_name = Column(String(255))
     emergency_contact_address = Column(TEXT)
@@ -309,15 +321,34 @@ class AntenatalPlan(Base):
     
     mother = relationship("Mother", back_populates="antenatal_plans")
 
-# --- NEW MODEL: MOH Officer ---
+    mother = relationship("Mother", back_populates="antenatal_plans")
+
+# --- NEW MODEL: MOH Office (The Unit) ---
+class MOHOffice(Base):
+    __tablename__ = "moh_offices"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, index=True) # e.g., "Colombo MC District 1"
+    district = Column(String(100)) # e.g., "Colombo"
+    province = Column(String(100)) # e.g., "Western Province"
+    
+    officers = relationship("MOHOfficer", back_populates="office")
+    midwives = relationship("Midwife", back_populates="office")
+
+# --- UPDATED MODEL: MOH Officer ---
 class MOHOfficer(Base):
     __tablename__ = "moh_officers"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255))
-    moh_area = Column(String(100))
+    
+    # Structure Fix: Link to Office ID instead of just String
+    moh_office_id = Column(Integer, ForeignKey("moh_offices.id"), nullable=True) 
+    moh_area = Column(String(100)) # Keep for legacy/backward compat for now
+    
     email = Column(String(255))
+    
+    office = relationship("MOHOffice", back_populates="officers")
 
 # --- NEW: Appointment Model ---
 class Appointment(Base):
@@ -327,7 +358,7 @@ class Appointment(Base):
     midwife_id = Column(Integer, ForeignKey("midwives.id"), nullable=False)
     mother_id = Column(Integer, ForeignKey("mothers.id"), nullable=False)
     
-    date_time = Column(DATETIME, nullable=False)
+    date_time = Column(DateTime, nullable=False)
     visit_type = Column(String(50)) # e.g., "Home Visit", "Clinic"
     status = Column(String(50), default="Scheduled") # Scheduled, Completed, Cancelled
     notes = Column(TEXT)
@@ -352,3 +383,44 @@ class LeaveRequest(Base):
     moh_comment = Column(TEXT)
     
     midwife = relationship("Midwife", back_populates="leave_requests")
+
+# --- NEW: Message Model (Chat) ---
+class Message(Base):
+    __tablename__ = "messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    sender_id = Column(Integer, nullable=False) # Midwife ID or Mother ID
+    receiver_id = Column(Integer, nullable=False) # Midwife ID or Mother ID
+    
+    # "midwife" or "mother"
+    sender_role = Column(String(50), nullable=False) 
+    
+    content = Column(TEXT, nullable=False)
+    timestamp = Column(DateTime, default=datetime.now)
+    is_read = Column(Boolean, default=False)
+    
+    # Alternatively, we could have used a polymorphic association, but this is simpler for MVP.
+
+# --- NEW: Risk Alert Model ---
+class Alert(Base):
+    __tablename__ = "alerts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    mother_id = Column(Integer, ForeignKey("mothers.id"), nullable=False)
+    
+    # Severity: "High", "Medium", "Info"
+    severity = Column(String(50), nullable=False)
+    
+    # Type: "BP", "Diabetes", "BMI", "Age", "General"
+    alert_type = Column(String(50), nullable=False)
+    
+    # The personalized message: "Hey [Name]..."
+    message = Column(TEXT, nullable=False)
+    
+    is_resolved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.now)
+    
+    mother = relationship("Mother", back_populates="alerts")
+
+# Update Mother relationship
+Mother.alerts = relationship("Alert", back_populates="mother")

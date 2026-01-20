@@ -1,0 +1,46 @@
+{
+  "Western Province": {
+    "Colombo": ["Colombo MC District 1", "Colombo MC District 2A", "Colombo MC District 2B", "Colombo MC District 3", "Colombo MC District 4", "Colombo MC District 5", "Dehiwala", "Ratmalana", "Moratuwa", "Maharagama", "Boralesgamuwa", "Kaduwela", "Kolonnawa", "Hanwella", "Homagama", "Padukka", "Piliyandala", "Egoda Uyana"],
+    "Gampaha": ["Gampaha", "Attanagalla", "Biyagama", "Divulapitiya", "Dompe", "Ja-Ela", "Katana", "Kelaniya", "Mahara", "Minuwangoda", "Mirigama", "Negombo", "Ragama", "Seeduwa", "Wattala", "BOI-Katunayake"],
+    "Kalutara": ["Kalutara", "Panadura", "Horana", "Bandaragama", "Matugama", "Agalawatta", "Bulathsinhala", "Beruwala", "Dodangoda", "Ingiriya", "Walallawita", "Madurawala", "Palindanuwara", "NIHS Kalutara"]
+  },
+  "Central Province": {
+    "Kandy": ["Kandy MC", "Akurana", "Bambaradeniya", "Doluwa", "Galagedara", "Galaha", "Ganga Ihala Korale", "Gangawata Korale", "Harispattuwa", "Hasalaka", "Hatharaliyadda", "Kadugannawa", "Kundasale", "Manikhinna", "Medadumbara", "Nawalapitiya", "Panvila", "Thalatuoya", "Poojapitiya", "Udadumbara", "Udapalatha (Gampola)", "Udunuwara", "Waththegama", "Yatinuwara"],
+    "Matale": ["Matale", "Rattota", "Galewela", "Dambulla", "Naula", "Laggala Pallegama", "Yatawatta", "Ukuwela", "Pallepola", "Wilgamuwa", "Ambangangakoralaya"],
+    "Nuwara Eliya": ["Nuwara Eliya", "Kothmale", "Maskeliya", "Ambagamuwa", "Walapane", "Maturata", "Nawatispane", "Hanguranketa", "Bagawantalawa", "Ragala", "Lidula", "Kotagala", "MC Nuwara Eliya"]
+  },
+  "Southern Province": {
+    "Galle": ["Galle MC", "Akmeemana", "Ambalangoda", "Baddegama", "Balapitiya", "Benthota", "Bope-Poddala", "Elpitiya", "Habaraduwa", "Hikkaduwa", "Imaduwa", "Karandeniya", "Neluwa", "Niyagama", "Thawalama", "Udugama", "Gonapeenuwala", "Welivitiya-Divithura", "Yakkalamulla", "Rathgama"],
+    "Matara": ["Matara MC", "Akuressa", "Athuraliya", "Devinuwara", "Dickwella", "Hakmana", "Kamburupitiya", "Kirinda Puhulwella", "Kotapola", "Malimbada", "Mulatiyana", "Pasgoda", "Pitabeddara", "Thihagoda", "Weligama", "Welipitiya", "Deiyandara"],
+    "Hambantota": ["Hambantota", "Ambalantota", "Angunukolapelessa", "Beliatta", "Katuwana", "Lunugamvehera", "Okewela", "Sooriyawewa", "Tangalle", "Tissamaharama", "Walasmulla", "Weeraketiya"]
+  },
+  "Northern Province": {
+    "Jaffna": ["Jaffna MC", "Nallur", "Kopay", "Chavakachcheri", "Point Pedro", "Karaveddy", "Uduvil", "Chankanai", "Sandilipay", "Tellippalai", "Kayts", "Velanai", "Maruthankerny", "Karainagar"],
+    "Kilinochchi": ["Kilinochchi", "Pallai", "Poonakary", "Karachchi"],
+    "Mannar": ["Mannar", "Nanaddan", "Musali", "Madhu", "Manthai West"],
+    "Vavuniya": ["Vavuniya", "Vavuniya South", "Vavuniya North", "Cheddikulam"],
+    "Mullaitivu": ["Mullaitivu", "Puthukudiyiruppu", "Oddusuddan", "Maritimepattu", "Thunukkai", "Welioya"]
+  },
+  "Eastern Province": {
+    "Batticaloa": ["Batticaloa", "Arayampathy", "Chenkalady", "Eravur", "Kaluwanchikudy", "Kattankudy", "Odamavadi", "Paddippalai", "Vakarai", "Valaichchenai", "Vavunathevu", "Vellavely", "Eravur Pattu", "Kiran"],
+    "Trincomalee": ["Trincomalee", "Kuchchaveli", "Muttur", "Gomarankadawela", "Kantale", "Kinniya", "Morawewa", "Padavi Sri Pura", "Seruvila", "Thampalagama", "Verugal", "Trincomalee Town and Gravets"],
+    "Ampara": ["Ampara", "Damana", "Lahugala", "Mahaoya", "Padiyathalawa", "Uhana", "Dehiattakandiya"],
+    "Kalmunai": ["Kalmunai North", "Kalmunai South", "Akkaraipattu", "Addalaichenai", "Alayadivembu", "Irakkamam", "Karaitivu", "Navithanveli", "Nintavur", "Pottuvil", "Sainthamaruthu", "Sammanthurai", "Thirukkovil"]
+  },
+  "North Western Province": {
+    "Kurunegala": ["Kurunegala", "Alawwa", "Bingiriya", "Galgamuwa", "Ibbagamuwa", "Kuliyapitiya East", "Kuliyapitiya West", "Mawathagama", "Narammala", "Nikaweratiya", "Pannala", "Polgahawela", "Wariyapola", "Ambanpola", "Kotawehera", "Weerambugedara", "Udubaddawa", "Mallawapitiya", "Rasnayakapura", "Bamunakotuwa", "Ridigama", "Ganewatta", "Mahawa", "Maspotha", "Panduwasnuwara East", "Kobeigane", "Ehetuwewa", "Panduwasnuwara West", "Polpithigama", "Giribawa"],
+    "Puttalam": ["Puttalam", "Chilaw", "Anamaduwa", "Arachchikattuwa", "Dankotuwa", "Kalpitiya", "Karuwalagaswewa", "Mahawewa", "Mundel", "Nattandiya", "Wennappuwa", "Madampe", "Mahakumbukkadawala"]
+  },
+  "North Central Province": {
+    "Anuradhapura": ["Anuradhapura", "Nuwaragam Palatha Central", "Nuwaragam Palatha East", "Galenbindunuwewa", "Galnewa", "Horowpothana", "Ipalogama", "Kahatagasdigiliya", "Kebithigollewa", "Kekirawa", "Madawachchiya", "Mihintale", "Nochchiyagama", "Padaviya", "Palagala", "Rajanganaya", "Rambewa", "Thabuththegama", "Thalawa", "Thirappane", "Medawachchiya", "Nachchaduwa", "Wilachchiya"],
+    "Polonnaruwa": ["Polonnaruwa", "Medirigiriya", "Hingurakgoda", "Lankapura", "Thamankaduwa", "Welikanda", "Dimbulagala", "Elahera", "Bakamuna"]
+  },
+  "Uva Province": {
+    "Badulla": ["Badulla", "Bandarawela", "Diyatalawa", "Ella", "Hali-Ela", "Haputale", "Mahiyanganaya", "Passara", "Welimada", "Girandurukotte", "Kandaketiya", "Meegahakiula", "Soranathota", "Uva-Paranagama", "Haldummulla", "Rideemaliyadda"],
+    "Monaragala": ["Monaragala", "Badalkumbura", "Bibile", "Buttala", "Kataragama", "Madulla", "Siyambalanduwa", "Thanamalwila", "Wellawaya", "Medagama", "Sevanagala"]
+  },
+  "Sabaragamuwa Province": {
+    "Ratnapura": ["Ratnapura", "Balangoda", "Eheliyagoda", "Embilipitiya", "Godakawela", "Kahawatta", "Kuruwita", "Nivithigala", "Pelmadulla", "Ayagama", "Elapatha", "Imbulpe", "Kalawana", "Kiriella", "Kolonna", "Opanayaka", "Weligepola", "Rakwana", "Atakalanpanna", "Pallebedda"],
+    "Kegalle": ["Kegalle", "Aranayake", "Bulathkohupitiya", "Dehiovita", "Deraniyagala", "Galigamuwa", "Mawanella", "Rambukkana", "Ruwanwella", "Warakapola", "Yatiyantota"]
+  }
+}

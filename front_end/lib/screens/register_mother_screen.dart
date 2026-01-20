@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart'; // Import Geolocator
 import '../services/api_service.dart';
-
 import '../models/mother.dart';
 
 class RegisterMotherScreen extends StatefulWidget {
-  final Mother? motherToEdit; // using Mother model
+  final Mother? motherToEdit;
 
   RegisterMotherScreen({this.motherToEdit});
 
@@ -22,6 +22,11 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
   final _contactController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Location State
+  double? _latitude;
+  double? _longitude;
+  String? _locationStatus;
+
   bool _isEditing = false;
   bool _isLoading = false;
 
@@ -34,7 +39,53 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
       _nicController.text = widget.motherToEdit!.nic;
       _addressController.text = widget.motherToEdit!.address;
       _contactController.text = widget.motherToEdit!.contactNumber;
-      // Password is NOT loaded for security
+
+      // We assume Mother model DOES NOT yet have lat/lng in frontend model
+      // so we start null or update Mother model later.
+      // For now, we only support capturing NEW coordinates.
+    }
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() {
+      _locationStatus = "Getting location...";
+    });
+
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() => _locationStatus = "Location services disabled.");
+      return;
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() => _locationStatus = "Location permission denied.");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() => _locationStatus = "Location permanently denied.");
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+        _locationStatus =
+            "Pinned: ${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}";
+      });
+    } catch (e) {
+      setState(() => _locationStatus = "Error getting location.");
     }
   }
 
@@ -51,13 +102,16 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
       'contact_number': _contactController.text,
     };
 
+    // Add Coordinates if captured
+    if (_latitude != null && _longitude != null) {
+      data['latitude'] = _latitude;
+      data['longitude'] = _longitude;
+    }
+
     bool success;
     if (_isEditing) {
-      // Update existing
-      // Note: We don't send NIC or Password on update
       success = await _apiService.updateMother(widget.motherToEdit!.id, data);
     } else {
-      // Create new
       data['nic'] = _nicController.text;
       data['password'] = _passwordController.text;
       success = await _apiService.createMother(data);
@@ -74,7 +128,7 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      Navigator.pop(context, true); // Return "true" to signal refresh
+      Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -107,14 +161,36 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
               TextFormField(
                 controller: _nicController,
                 decoration: InputDecoration(labelText: 'NIC Number'),
-                enabled: !_isEditing, // NIC cannot be changed if editing
+                enabled: !_isEditing,
                 validator: (val) => val!.isEmpty ? 'NIC is required' : null,
               ),
               SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: InputDecoration(labelText: 'Address'),
+
+              // Address & Location Row
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _addressController,
+                      decoration: InputDecoration(labelText: 'Address'),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.location_on, color: Colors.red),
+                    onPressed: _getCurrentLocation,
+                    tooltip: "Pin Current Location",
+                  ),
+                ],
               ),
+              if (_locationStatus != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    _locationStatus!,
+                    style: TextStyle(color: Colors.blueGrey, fontSize: 12),
+                  ),
+                ),
+
               SizedBox(height: 16),
               TextFormField(
                 controller: _contactController,

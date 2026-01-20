@@ -1,0 +1,115 @@
+# System-Wide Sequence Diagram (Midwife Workflow)
+
+This diagram represents the end-to-end flow of the **Rakawaranaya Midwife System**. It illustrates how a Midwife interacts with the Mobile App (Frontend) and how data flows through the API to the Database, including critical background processes like Risk Analysis.
+
+## Legend
+- **Frontend**: Flutter Mobile App (`View` + `ApiService`)
+- **Backend API**: FastAPI (`main.py`)
+- **Business Logic**: CRUD & Risk Engine (`crud.py`, `risk_engine.py`)
+- **Database**: PostgreSQL/SQLite
+
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    box "Mobile Application (Frontend)" #e6f7ff
+        actor Midwife
+        participant UI as App Screens
+        participant Service as ApiService
+    end
+
+    box "Backend System" #fff0f6
+        participant API as FastAPI (main.py)
+        participant Logic as Controller & RiskEngine
+        participant DB as Database
+    end
+
+    %% --- 1. AUTHENTICATION ---
+    opt Login Flow
+        Midwife->>UI: Enter Username & Password
+        UI->>Service: login(username, password)
+        Service->>API: POST /token
+        API->>Logic: verify_password()
+        Logic->>DB: Fetch Hash
+        DB-->>Logic: Return Hash
+        
+        alt Invalid Credentials
+            Logic-->>API: False
+            API-->>Service: 401 Unauthorized
+            Service-->>UI: Show Error
+        else Valid Credentials
+            Logic-->>API: True
+            API-->>Service: 200 OK (Access Token)
+            Service-->>UI: Navigate to Home
+        end
+    end
+
+    %% --- 2. DASHBOARD LOADING ---
+    rect rgb(240, 240, 240)
+        Note right of Midwife: Session Active
+        UI->>Service: getDashboardStats()
+        Service->>API: GET /midwives/dashboard-stats
+        API->>Logic: Count(Mothers, Today's Visits)
+        Logic->>DB: Execute Queries
+        DB-->>Logic: Return Counts
+        Logic-->>API: Return Stats JSON
+        API-->>Service: 200 OK
+        Service-->>UI: Update Dashboard Widgets
+    end
+
+    %% --- 3. MAIN INTERACTION LOOP ---
+    loop User Actions
+        
+        %% A. REGISTER MOTHER
+        opt Register New Mother
+            Midwife->>UI: Fill Registration Form
+            UI->>Service: createMother(data)
+            Service->>API: POST /mothers/
+            API->>Logic: create_mother()
+            Logic->>DB: Insert Mother Record
+            DB-->>Logic: Commit
+            Logic-->>API: Return Mother Object
+            API-->>Service: 200 OK
+            Service-->>UI: Show "Registration Success"
+        end
+
+        %% B. SCHEDULE APPOINTMENT
+        opt Schedule Appointment
+            Midwife->>UI: Select Date & Mother
+            UI->>Service: createAppointment()
+            Service->>API: POST /appointments/
+            API->>Logic: create_appointment()
+            Logic->>DB: Insert Appointment
+            DB-->>Logic: Commit
+            Logic-->>API: Success
+            API-->>Service: 200 OK
+            Service-->>UI: Update Calendar
+        end
+
+        %% C. CLINICAL VISIT (ANC) & RISK ANALYSIS
+        opt Record ANC Visit (Risk Engine)
+            Midwife->>UI: Enter Clinical Data (BP, Weight, Urine)
+            UI->>Service: createANCVisit(data)
+            Service->>API: POST /anc-visits/
+            API->>Logic: create_anc_visit()
+            Logic->>DB: Insert Visit Data
+            
+            %% INTERNAL RISK ENGINE TRIGGER
+            par Risk Analysis Process
+                Logic->>Logic: RiskEngine.evaluate_dynamic_risks()
+                Logic->>Logic: Check Flags (Diabetes, Hypertension)
+                
+                alt High Risk Detected
+                    Logic->>DB: Update Mother.risk_level = "High"
+                    Logic->>DB: Create Risk Alert
+                end
+            end
+            
+            DB-->>Logic: Commit All
+            Logic-->>API: Return Visit Record
+            API-->>Service: 200 OK
+            Service-->>UI: Show "Saved" & Refresh Risk Status
+        end
+        
+    end
+```

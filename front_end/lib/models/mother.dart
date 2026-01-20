@@ -9,6 +9,8 @@ class Mother {
   final String riskLevel;
   final DateTime? pregnancyStartDate;
   final DateTime? deliveryDate;
+  final double? latitude;
+  final double? longitude;
 
   Mother({
     required this.id,
@@ -21,6 +23,8 @@ class Mother {
     this.riskLevel = 'Low',
     this.pregnancyStartDate,
     this.deliveryDate,
+    this.latitude,
+    this.longitude,
   });
 
   factory Mother.fromJson(Map<String, dynamic> json) {
@@ -39,6 +43,12 @@ class Mother {
       deliveryDate: json['delivery_date'] != null
           ? DateTime.parse(json['delivery_date'])
           : null,
+      latitude: json['latitude'] != null
+          ? (json['latitude'] as num).toDouble()
+          : null,
+      longitude: json['longitude'] != null
+          ? (json['longitude'] as num).toDouble()
+          : null,
     );
   }
 
@@ -50,6 +60,10 @@ class Mother {
       'address': address,
       'contact_number': contactNumber,
       'midwife_id': midwifeId,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
+
+  bool get hasLocation => latitude != null && longitude != null;
 }

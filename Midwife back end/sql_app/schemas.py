@@ -51,6 +51,8 @@ class PregnancyRecordBase(BaseModel):
     family_register_no: Optional[str] = None
     village_division: Optional[str] = None
     moh_division: Optional[str] = None
+    moh_province: Optional[str] = None
+    moh_district: Optional[str] = None
     phi_area: Optional[str] = None
     
     # Personal Info
@@ -203,6 +205,9 @@ class MotherBase(BaseModel):
     risk_level: Optional[str] = "Low"
     pregnancy_start_date: Optional[date] = None
     delivery_date: Optional[date] = None
+    # Geolocation
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 # Input Schemas for Smart Actions
 class PregnancyStart(BaseModel):
@@ -226,6 +231,9 @@ class MotherUpdate(BaseModel):
     risk_level: Optional[str] = None
     pregnancy_start_date: Optional[date] = None
     delivery_date: Optional[date] = None
+    # Geolocation
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class Mother(MotherBase):
     id: int
@@ -301,7 +309,8 @@ class LeaveRequest(LeaveRequestBase):
 class MOHOfficerBase(BaseModel):
     username: str
     full_name: str
-    moh_area: Optional[str] = None
+    moh_area: Optional[str] = None # Legacy
+    moh_office_id: Optional[int] = None # NEW Strict
     email: Optional[str] = None
 
 class MOHOfficerCreate(MOHOfficerBase):
@@ -325,6 +334,7 @@ class MidwifeRegistration(BaseModel):
     slmc_reg_no: str
     service_grade: Optional[str] = None
     assigned_moh_area: str
+    moh_office_id: int # REQUIRED for new stricter logic
     user_must_change_password: bool = True
     is_active: bool = True
 
@@ -333,6 +343,8 @@ class MidwifeCreate(BaseModel):
     username: str
     password: str
     full_name: Optional[str] = None
+    assigned_moh_area: Optional[str] = None
+    moh_office_id: Optional[int] = None
 
 # 4. Midwife Response Model
 class MidwifeBase(BaseModel):
@@ -435,5 +447,47 @@ class PNCVisit(PNCVisitBase):
     id: int
     mother_id: int
     appointment_id: int
+    class Config:
+        from_attributes = True
+
+# --- Chat Schemas ---
+class MessageBase(BaseModel):
+    content: str
+
+class MessageCreate(MessageBase):
+    receiver_id: int
+
+class Message(MessageBase):
+    id: int
+    sender_id: int
+    receiver_id: int
+    sender_role: str # "midwife" or "mother"
+    timestamp: datetime
+    
+    class Config:
+        from_attributes = True
+
+# --- Alert Schemas ---
+class AlertBase(BaseModel):
+    severity: str
+    alert_type: str
+    message: str
+
+class AlertCreate(AlertBase):
+    mother_id: int
+
+class Alert(AlertBase):
+    id: int
+    mother_id: int
+    is_resolved: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# --- Unread Messages Sender Schema ---
+class UnreadSender(BaseModel):
+    id: int
+    name: str
     class Config:
         from_attributes = True

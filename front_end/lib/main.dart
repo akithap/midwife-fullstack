@@ -3,9 +3,13 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/midwife_home_screen.dart';
+import 'screens/midwife_main_screen.dart';
 import 'screens/mother_home_screen.dart';
 import 'enums/user_role.dart';
+
+import 'services/sync_service.dart';
+
+import 'providers/theme_provider.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,14 +18,23 @@ void main() {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // This provides the AuthProvider to all widgets below it
-    return ChangeNotifierProvider(
-      create: (context) => AuthProvider(),
-      child: MaterialApp(
-        title: 'Midwife App',
-        theme: AppTheme.lightTheme,
-        home: AuthWrapper(), // The home page is now this wrapper
-        debugShowCheckedModeBanner: false,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => SyncService()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Midwife App',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
+            home: AuthWrapper(),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
     );
   }
@@ -42,7 +55,7 @@ class AuthWrapper extends StatelessWidget {
     // 2. Check the user's role and show the correct screen
     switch (authProvider.role) {
       case UserRole.midwife:
-        return MidwifeHomeScreen(); // Go to Midwife dashboard
+        return MidwifeMainScreen(); // Go to Midwife dashboard (Shell)
       case UserRole.mother:
         return MotherHomeScreen(); // Go to Mother dashboard
       case UserRole.none:

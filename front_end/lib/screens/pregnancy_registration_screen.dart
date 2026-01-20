@@ -91,6 +91,58 @@ class _PregnancyRegistrationScreenState
     'Renal Disease': false,
   };
 
+  // --- NEW: MOH Dropdown State ---
+  Map<String, dynamic> _mohOffices = {};
+  String? _selectedProvince;
+  String? _selectedDistrict;
+  String? _selectedMOH;
+
+  Future<void> _fetchMOHOffices() async {
+    try {
+      final data = await _apiService
+          .getAllMOHOffices(); // Assuming added to ApiService or fetch manually
+      // Or duplicate here for simplicity if ApiService not updated yet (user didn't ask to update ApiService explicitly but I should)
+      // I'll add to ApiService later or make a raw call here.
+      // Since ApiService is in use, I should update it.
+      setState(() {
+        _mohOffices = data;
+      });
+
+      // If editing, we might need to match the strings back to selection
+      if (widget.existingData != null) {
+        _matchLocationFromText();
+      }
+    } catch (e) {
+      print("Error fetching MOH offices: $e");
+    }
+  }
+
+  void _matchLocationFromText() {
+    // If we have text from pre-fill, try to find it in the tree to set dropdowns
+    // Simple loop search
+    final moh = _mohAreaController.text;
+    if (moh.isEmpty) return;
+
+    for (var province in _mohOffices.keys) {
+      var districts = _mohOffices[province] as Map<String, dynamic>;
+      for (var district in districts.keys) {
+        var areas = (districts[district] as List)
+            .map((e) => e.toString())
+            .toList();
+        if (areas.contains(moh)) {
+          setState(() {
+            _selectedProvince = province;
+            _selectedDistrict = district;
+            _selectedMOH = moh;
+          });
+          // Also set province/district if we had saved them separately, but we only have 'moh_division' in old data
+          // so REVERSE lookup is needed.
+          return;
+        }
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -99,6 +151,7 @@ class _PregnancyRegistrationScreenState
     } else {
       _regDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
     }
+    _fetchMOHOffices();
   }
 
   void _preFillData() {
@@ -366,7 +419,11 @@ class _PregnancyRegistrationScreenState
               : null,
           "registration_no": _regNoController.text,
           "family_register_no": _familyRegController.text,
-          "moh_division": _mohAreaController.text,
+          "moh_division": _mohAreaController
+              .text, // This is the MOH Area string e.g., "Dehiwala"
+          "moh_province": _selectedProvince,
+          "moh_district": _selectedDistrict,
+
           "phi_area": _phiAreaController.text,
           "village_division": _gnDivisionController.text,
 
@@ -517,10 +574,103 @@ class _PregnancyRegistrationScreenState
                             labelText: "Family Reg No",
                           ),
                         ),
-                        TextFormField(
-                          controller: _mohAreaController,
-                          decoration: InputDecoration(labelText: "MOH Area"),
-                        ),
+                        // --- MOH Area Cascading Dropdowns ---
+                        if (_mohOffices.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text("Loading MOH Offices..."),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          DropdownButtonFormField<String>(
+                            value: _selectedProvince,
+                            decoration: InputDecoration(labelText: "Province"),
+                            items: _mohOffices.keys
+                                .map(
+                                  (p) => DropdownMenuItem(
+                                    value: p,
+                                    child: Text(p),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedProvince = val;
+                                _selectedDistrict = null;
+                                _selectedMOH = null;
+                                _mohAreaController.text = ""; // Clear
+                              });
+                            },
+                          ),
+                          SizedBox(height: 10),
+                          DropdownButtonFormField<String>(
+                            value: _selectedDistrict,
+                            decoration: InputDecoration(
+                              labelText: "Health District",
+                            ),
+                            items: _selectedProvince == null
+                                ? []
+                                : (_mohOffices[_selectedProvince]
+                                          as Map<String, dynamic>)
+                                      .keys
+                                      .map(
+                                        (d) => DropdownMenuItem(
+                                          value: d,
+                                          child: Text(d),
+                                        ),
+                                      )
+                                      .toList(),
+                            onChanged: _selectedProvince == null
+                                ? null
+                                : (val) {
+                                    setState(() {
+                                      _selectedDistrict = val;
+                                      _selectedMOH = null;
+                                      _mohAreaController.text = "";
+                                    });
+                                  },
+                          ),
+                          SizedBox(height: 10),
+                          DropdownButtonFormField<String>(
+                            value: _selectedMOH,
+                            decoration: InputDecoration(labelText: "MOH Area"),
+                            items: _selectedDistrict == null
+                                ? []
+                                : (_mohOffices[_selectedProvince][_selectedDistrict]
+                                          as List)
+                                      .map<DropdownMenuItem<String>>(
+                                        (m) => DropdownMenuItem(
+                                          value: m.toString(),
+                                          child: Text(m.toString()),
+                                        ),
+                                      )
+                                      .toList(),
+                            onChanged: _selectedDistrict == null
+                                ? null
+                                : (val) {
+                                    setState(() {
+                                      _selectedMOH = val;
+                                      _mohAreaController.text = val!;
+                                    });
+                                  },
+                            validator: (v) =>
+                                v == null || v.isEmpty ? "Required" : null,
+                          ),
+                        ],
+
+                        // Hidden TextForm to keep controller sync logic if needed, or just rely on state
+                        // We updated _mohAreaController in onChanged, so it's fine.
                         TextFormField(
                           controller: _phiAreaController,
                           decoration: InputDecoration(labelText: "PHI Area"),

@@ -1,0 +1,163 @@
+['id', 'full_name', 'nic', 'address', 'contact_number', 'hashed_password', 'latitude', 'longitude', 'midwife_id', 'status', 'risk_level', 'pregnancy_start_date', 'delivery_date']
+
+Traceback (most recent call last):
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\connection_cext.py", line 772, in cmd_query
+    self._cmysql.query(
+    ~~~~~~~~~~~~~~~~~~^
+        query,
+        ^^^^^^
+    ...<3 lines>...
+        query_attrs=self.query_attrs,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+_mysql_connector.MySQLInterfaceError: Unknown column 'moh_officers.moh_office_id' in 'field list'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\cursor_cext.py", line 353, in execute
+    self._connection.cmd_query(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._stmt_partition["mappable_stmt"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        raw_as_string=self._raw_as_string,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\opentelemetry\context_propagation.py", line 97, in wrapper
+    return method(cnx, *args, **kwargs)
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\connection_cext.py", line 781, in cmd_query
+    raise get_mysql_exception(
+        err.errno, msg=err.msg, sqlstate=err.sqlstate
+    ) from err
+mysql.connector.errors.ProgrammingError: 1054 (42S22): Unknown column 'moh_officers.moh_office_id' in 'field list'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\reseed_analytics.py", line 217, in <module>
+    seed_data()
+    ~~~~~~~~~^^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\reseed_analytics.py", line 57, in seed_data
+    midwife = create_moh_and_midwife()
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\reseed_analytics.py", line 18, in create_moh_and_midwife
+    if not db.query(models.MOHOfficer).filter(models.MOHOfficer.username == "admin").first():
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\orm\query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\orm\query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 951, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\cursor_cext.py", line 353, in execute
+    self._connection.cmd_query(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._stmt_partition["mappable_stmt"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        raw_as_string=self._raw_as_string,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\opentelemetry\context_propagation.py", line 97, in wrapper
+    return method(cnx, *args, **kwargs)
+  File "D:\apiit\A second year\cc\second sem\Midwife_sys\Midwife back end\venv\Lib\site-packages\mysql\connector\connection_cext.py", line 781, in cmd_query
+    raise get_mysql_exception(
+        err.errno, msg=err.msg, sqlstate=err.sqlstate
+    ) from err
+sqlalchemy.exc.ProgrammingError: (mysql.connector.errors.ProgrammingError) 1054 (42S22): Unknown column 'moh_officers.moh_office_id' in 'field list'
+[SQL: SELECT moh_officers.id AS moh_officers_id, moh_officers.username AS moh_officers_username, moh_officers.hashed_password AS moh_officers_hashed_password, moh_officers.full_name AS moh_officers_full_name, moh_officers.moh_office_id AS moh_officers_moh_office_id, moh_officers.moh_area AS moh_officers_moh_area, moh_officers.email AS moh_officers_email 
+FROM moh_officers 
+WHERE moh_officers.username = %(username_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'username_1': 'admin', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)

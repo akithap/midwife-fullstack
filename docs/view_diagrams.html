@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rakawaranaya System Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            background: #f4f6f8;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .diagram-box {
+            background: white;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>System Diagrams</h1>
+        <p>The automated image generator was unavailable. Please use the buttons below to download the diagrams as PNGs.
+        </p>
+
+        <!-- 1. System Sequence -->
+        <div class="diagram-box">
+            <h2>1. System-Wide Sequence Diagram</h2>
+            <pre class="mermaid" id="diag1">
+sequenceDiagram
+    autonumber
+    box "Mobile Application (Frontend)" #e6f7ff
+        actor Midwife
+        participant UI as App Screens
+        participant Service as ApiService
+    end
+    box "Backend System" #fff0f6
+        participant API as FastAPI (main.py)
+        participant Logic as Controller & RiskEngine
+        participant DB as Database
+    end
+    opt Login Flow
+        Midwife->>UI: Enter Username & Password
+        UI->>Service: login(username, password)
+        Service->>API: POST /token
+        API->>Logic: verify_password()
+        Logic->>DB: Fetch Hash
+        DB-->>Logic: Return Hash
+        alt Invalid Credentials
+            Logic-->>API: False
+            API-->>Service: 401 Unauthorized
+            Service-->>UI: Show Error
+        else Valid Credentials
+            Logic-->>API: True
+            API-->>Service: 200 OK
+            Service-->>UI: Navigate to Home
+        end
+    end
+    rect rgb(240, 240, 240)
+        Note right of Midwife: Session Active
+        UI->>Service: getDashboardStats()
+        Service->>API: GET /midwives/dashboard-stats
+        API->>Logic: Count(Mothers, Today's Visits)
+        Logic->>DB: Execute Queries
+        DB-->>Logic: Return Counts
+        Logic-->>API: Return Stats JSON
+        API-->>Service: 200 OK
+        Service-->>UI: Update Dashboard Widgets
+    end
+    loop User Actions
+        opt Register New Mother
+            Midwife->>UI: Fill Registration Form
+            UI->>Service: createMother(data)
+            Service->>API: POST /mothers/
+            API->>Logic: create_mother()
+            Logic->>DB: Insert Mother Record
+            DB-->>Logic: Commit
+            Logic-->>API: Return Mother Object
+            API-->>Service: 200 OK
+            Service-->>UI: Show "Registration Success"
+        end
+        opt Schedule Appointment
+            Midwife->>UI: Select Date & Mother
+            UI->>Service: createAppointment()
+            Service->>API: POST /appointments/
+            API->>Logic: create_appointment()
+            Logic->>DB: Insert Appointment
+            DB-->>Logic: Commit
+            Logic-->>API: Success
+            API-->>Service: 200 OK
+            Service-->>UI: Update Calendar
+        end
+        opt Record ANC Visit (Risk Engine)
+            Midwife->>UI: Enter Clinical Data
+            UI->>Service: createANCVisit(data)
+            Service->>API: POST /anc-visits/
+            API->>Logic: create_anc_visit()
+            Logic->>DB: Insert Visit Data
+            par Risk Analysis Process
+                Logic->>Logic: RiskEngine.evaluate_dynamic_risks()
+                Logic->>Logic: Check Flags
+                alt High Risk Detected
+                    Logic->>DB: Update Mother.risk_level = "High"
+                    Logic->>DB: Create Risk Alert
+                end
+            end
+            DB-->>Logic: Commit All
+            Logic-->>API: Return Visit Record
+            API-->>Service: 200 OK
+            Service-->>UI: Show "Saved" & Refresh Risk Status
+        end
+    end
+        </pre>
+            <button onclick="downloadSVG('diag1', 'system_sequence_diagram.png')">Download PNG</button>
+        </div>
+
+        <!-- 2. MOH Analytics -->
+        <div class="diagram-box">
+            <h2>2. MOH Analytics</h2>
+            <pre class="mermaid" id="diag2">
+sequenceDiagram
+    autonumber
+    actor MOH as MOH Staff
+    participant Web as MOH Website (Frontend)
+    participant API as Backend API
+    participant DB as Database
+    Note over MOH, Web: User Logic
+    MOH->>Web: Open Website & Credentials
+    Web->>API: POST /moh/token
+    activate API
+    API->>DB: Validate MOH Credentials
+    DB-->>API: Result
+    alt Validation Failed
+        API-->>Web: 401 Unauthorized
+        Web-->>MOH: Display Error Message
+    else Validation Success
+        API-->>Web: 200 OK (Token)
+        Web-->>MOH: Display Dashboard
+    end
+    deactivate API
+    MOH->>Web: Click "Reports" on Menu
+    activate Web
+    Web->>API: GET /moh/analytics/
+    activate API
+    API->>DB: Query Data
+    DB-->>API: Return Data
+    API-->>Web: JSON Analytics Data
+    deactivate API
+    Web-->>MOH: Show Analytics Dashboard
+    deactivate Web
+        </pre>
+            <button onclick="downloadSVG('diag2', 'moh_analytics.png')">Download PNG</button>
+        </div>
+
+        <!-- 3. Midwife Map -->
+        <div class="diagram-box">
+            <h2>3. Midwife Location Map</h2>
+            <pre class="mermaid" id="diag3">
+sequenceDiagram
+    autonumber
+    actor Midwife
+    participant App as Mobile App
+    participant API as Backend API
+    participant DB as Database
+    Midwife->>App: Open App
+    Midwife->>App: Login
+    activate App
+    App->>API: POST /token
+    activate API
+    API->>DB: Validate Midwife
+    DB-->>API: Valid
+    API-->>App: 200 OK (Token)
+    deactivate API
+    App-->>Midwife: View Dashboard
+    deactivate App
+    Midwife->>App: Click "Map"
+    activate App
+    App->>API: GET /mothers/
+    activate API
+    API->>DB: Query Mothers with Lat/Lng
+    DB-->>API: Return Mothers List
+    API-->>App: List[Mother]
+    deactivate API
+    App->>App: Render Markers
+    App-->>Midwife: Load Map Interface
+    deactivate App
+        </pre>
+            <button onclick="downloadSVG('diag3', 'midwife_map.png')">Download PNG</button>
+        </div>
+
+        <!-- 4. Communication -->
+        <div class="diagram-box">
+            <h2>4. Communication (Chat)</h2>
+            <pre class="mermaid" id="diag4">
+sequenceDiagram
+    autonumber
+    actor Midwife
+    participant App as Mobile App
+    participant API as Backend API
+    participant DB as Database
+    Note over Midwife, App: Pre-condition: Logged In
+    Midwife->>App: View Dashboard
+    Midwife->>App: Select "Mothers"
+    activate App
+    App->>API: GET /mothers/
+    activate API
+    API->>DB: Fetch Assigned Mothers
+    DB-->>API: Return List
+    API-->>App: Display Mothers List
+    deactivate API
+    deactivate App
+    Midwife->>App: Click Message Icon
+    activate App
+    App->>API: GET /midwives/messages/{id}
+    activate API
+    API->>DB: Fetch Chat History
+    DB-->>API: Return Messages
+    API-->>App: JSON Message List
+    deactivate API
+    App-->>Midwife: Open Chat Screen
+    deactivate App
+        </pre>
+            <button onclick="downloadSVG('diag4', 'communication.png')">Download PNG</button>
+        </div>
+
+        <!-- 5. MOH Dashboard -->
+        <div class="diagram-box">
+            <h2>5. MOH Dashboard</h2>
+            <pre class="mermaid" id="diag5">
+sequenceDiagram
+    autonumber
+    actor User as MOH User
+    participant Web as Website UI
+    participant API as Backend API
+    participant DB as Database
+    User->>Web: Open Website
+    User->>Web: Login
+    activate Web
+    Web->>API: POST /moh/token
+    activate API
+    API->>DB: Check Credentials
+    alt Login Fail
+        DB-->>API: Invalid
+        API-->>Web: 401 Error
+        Web-->>User: Display Error Message
+    else Login Successful
+        DB-->>API: Valid
+        API-->>Web: 200 OK
+        Web->>API: GET /moh/dashboard/stats
+        API->>DB: Fetch Dashboard Stats
+        DB-->>API: Stats Data
+        API-->>Web: Return Stats
+        Web-->>User: View Dashboard
+    end
+    deactivate API
+    deactivate Web
+        </pre>
+            <button onclick="downloadSVG('diag5', 'moh_dashboard.png')">Download PNG</button>
+        </div>
+
+
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+        function downloadSVG(divId, filename) {
+            // Find the extracted SVG
+            const div = document.getElementById(divId);
+            const svg = div.querySelector('svg');
+            if (!svg) {
+                alert("Diagram not rendered yet. Please wait.");
+                return;
+            }
+
+            const svgData = new XMLSerializer().serializeToString(svg);
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            const img = new Image();
+
+            // Scale up for better quality
+            const scale = 2;
+            const width = svg.getBoundingClientRect().width * scale;
+            const height = svg.getBoundingClientRect().height * scale;
+
+            canvas.width = width;
+            canvas.height = height;
+
+            img.onload = function () {
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const a = document.createElement("a");
+                a.download = filename;
+                a.href = canvas.toDataURL("image/png");
+                a.click();
+            };
+
+            img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+        }
+    </script>
+
+</body>
+
+</html>

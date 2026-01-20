@@ -7,7 +7,8 @@ from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from . import models, schemas
-from sqlalchemy import or_, and_
+from .risk_engine import RiskEngine # NEW
+from sqlalchemy import or_, and_, func
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 
@@ -92,6 +93,7 @@ def create_moh_officer(db: Session, moh: schemas.MOHOfficerCreate):
         hashed_password=hashed_password, 
         full_name=moh.full_name,
         moh_area=moh.moh_area,
+        moh_office_id=moh.moh_office_id, # Link to Office
         email=moh.email
     )
     db.add(db_moh)
@@ -130,7 +132,9 @@ def create_midwife(db: Session, midwife: schemas.MidwifeCreate):
     db_midwife = models.Midwife(
         username=midwife.username, 
         hashed_password=hashed_password, 
-        full_name=midwife.full_name
+        full_name=midwife.full_name,
+        assigned_moh_area=midwife.assigned_moh_area,
+        moh_office_id=midwife.moh_office_id
     )
     db.add(db_midwife)
     db.commit()
@@ -277,6 +281,12 @@ def create_pregnancy_record(db: Session, record: schemas.PregnancyRecordCreate, 
     db.add(db_record)
     db.commit()
     db.refresh(db_record)
+
+    # --- NEW: Trigger Static Risk Analysis ---
+    mother = db.query(models.Mother).filter(models.Mother.id == mother_id).first()
+    if mother:
+        RiskEngine.evaluate_static_risks(db, mother, db_record)
+
     return db_record
 
 def get_pregnancy_records_for_mother(db: Session, mother_id: int):
@@ -370,10 +380,15 @@ def delete_appointment(db: Session, appointment_id: int):
 
 # --- ANC Visits ---
 def create_anc_visit(db: Session, visit: schemas.ANCVisitCreate):
-    db_visit = models.ANCVisit(**visit.dict())
     db.add(db_visit)
     db.commit()
     db.refresh(db_visit)
+
+    # --- NEW: Trigger Dynamic Risk Analysis ---
+    mother = db.query(models.Mother).filter(models.Mother.id == visit.mother_id).first()
+    if mother:
+        RiskEngine.evaluate_dynamic_risks(db, mother, db_visit)
+
     return db_visit
 
 def get_anc_visit_by_appointment(db: Session, appointment_id: int):
@@ -705,4 +720,497 @@ def report_delivery(db: Session, mother_id: int, delivery_date: str):
     db.commit()
     db.refresh(db_mother)
     return db_mother
+
+# ---------------------------------------------------------
+# ------------------- MOH REPORTS CRUD -------------------
+# ---------------------------------------------------------
+
+def get_moh_reports(db: Session, moh_office_id: int):
+    # 1. Find Midwives in this Office (Strict Hierarchy)
+    midwives = db.query(models.Midwife).filter(models.Midwife.moh_office_id == moh_office_id).all()
+    midwife_ids = [m.id for m in midwives]
+    
+    if not midwife_ids:
+        return {
+            "population": {"total": 0, "eligible": 0, "pregnant": 0, "postnatal": 0, "completed": 0},
+            "risks": {"high": 0, "low": 0, "factors": {}},
+            "weekly": {"registrations": 0, "deliveries": 0}
+        }
+    
+    # 2. Get Mothers
+    mothers = db.query(models.Mother).filter(models.Mother.midwife_id.in_(midwife_ids)).all()
+    
+    stats = {
+        "population": {
+            "total": len(mothers),
+            "eligible": 0,
+            "pregnant": 0,
+            "postnatal": 0,
+            "completed": 0
+        },
+        "risks": {
+            "high": 0, 
+            "low": 0,
+            "factors": {
+                "teen_pregnancy": 0,
+                "advanced_age": 0,
+                "diabetes": 0,
+                "hypertension": 0,
+                "cardiac": 0,
+                "grand_multipara": 0
+            }
+        },
+        "weekly": {
+            "registrations": 0,
+            "deliveries": 0
+        }
+    }
+    
+    today = datetime.now().date()
+    start_of_month = today.replace(day=1) 
+    start_of_week = today - timedelta(days=today.weekday()) # Monday
+    
+    for m in mothers:
+        # Population Counts
+        status = m.status.replace(" ", "").lower() # eligible, pregnant...
+        if status in stats["population"]:
+            stats["population"][status] += 1
+            
+        # Risk Analysis (Active Only)
+        if m.status in ["Pregnant", "Postnatal"]:
+            if m.risk_level == "High":
+                stats["risks"]["high"] += 1
+            else:
+                stats["risks"]["low"] += 1
+                
+            # Deep dive into latest record for specific risks
+            rec = get_pregnancy_record_by_mother(db, m.id)
+            if rec:
+                # Age Risks
+                if rec.mother_age and rec.mother_age < 20:
+                    stats["risks"]["factors"]["teen_pregnancy"] += 1
+                if rec.mother_age and rec.mother_age > 35:
+                    stats["risks"]["factors"]["advanced_age"] += 1
+                
+                # Medical Risks
+                if rec.risk_diabetes: stats["risks"]["factors"]["diabetes"] += 1
+                # Proxy for hypertension if not explicit
+                if rec.family_hypertension or rec.risk_renal: 
+                     stats["risks"]["factors"]["hypertension"] += 1
+                if rec.risk_cardiac: stats["risks"]["factors"]["cardiac"] += 1
+                if rec.risk_5th_pregnancy: stats["risks"]["factors"]["grand_multipara"] += 1
+                
+                # Weekly Registrations
+                if rec.created_at and rec.created_at.date() >= start_of_week:
+                    stats["weekly"]["registrations"] += 1
+        
+        # Weekly Deliveries
+        if m.status == "Postnatal" and m.delivery_date:
+            if m.delivery_date >= start_of_week:
+                stats["weekly"]["deliveries"] += 1
+                
+    return stats
+
+# ---------------------------------------------------------
+# ----------------------- CHAT CRUD -----------------------
+# ---------------------------------------------------------
+
+def create_message(db: Session, message: schemas.MessageCreate, sender_id: int, sender_role: str):
+    db_message = models.Message(
+        sender_id=sender_id,
+        sender_role=sender_role,
+        receiver_id=message.receiver_id,
+        content=message.content,
+        timestamp=datetime.now()
+    )
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
+    return db_message
+
+def get_chat_messages(db: Session, user1_id: int, user1_role: str, user2_id: int):
+    # Determine the "other role" automatically
+    # If user1 is midwife, user2 must be mother, and vice versa.
+    # We want messages where:
+    # (Sender=U1 AND Receiver=U2) OR (Sender=U2 AND Receiver=U1)
+    # AND Roles match implicitly because IDs are from separate tables but we track sender_role
+    
+    
+    # Logic:
+    # 1. User1 sent to User2 (SenderRole=U1_Role)
+    # 2. User2 sent to User1 (SenderRole!=U1_Role)
+    
+    # 7-Day Filter
+    seven_days_ago = datetime.now() - timedelta(days=7)
+
+    return db.query(models.Message).filter(
+        models.Message.timestamp >= seven_days_ago, # FILTER > 7 Days
+        or_(
+            and_(
+                models.Message.sender_id == user1_id,
+                models.Message.sender_role == user1_role,
+                models.Message.receiver_id == user2_id
+            ),
+            and_(
+                models.Message.sender_id == user2_id,
+                models.Message.sender_role != user1_role, # Sent by the other party
+                models.Message.receiver_id == user1_id
+            )
+        )
+    ).order_by(models.Message.timestamp.asc()).all()
+
+def get_unread_message_count(db: Session, user_id: int, user_role: str):
+    # Count messages sent TO this user that are NOT read
+    # If I am Midwife, sender_role must be 'mother'
+    # If I am Mother, sender_role must be 'midwife'
+    
+    sender_role_filter = "mother" if user_role == "midwife" else "midwife"
+    
+    return db.query(models.Message).filter(
+        models.Message.receiver_id == user_id,
+        models.Message.sender_role == sender_role_filter,
+        models.Message.is_read == False
+    ).count()
+
+def mark_chat_read(db: Session, user_id: int, user_role: str, other_user_id: int):
+    # Mark messages sent BY other_user TO me as read
+    
+    sender_role_filter = "mother" if user_role == "midwife" else "midwife"
+    
+    messages = db.query(models.Message).filter(
+        models.Message.receiver_id == user_id,
+        models.Message.sender_id == other_user_id,
+        models.Message.sender_role == sender_role_filter,
+        models.Message.is_read == False
+    ).all()
+    
+    for msg in messages:
+        msg.is_read = True
+        
+    db.commit()
+    return True
+
+def get_unread_senders(db: Session, user_id: int, user_role: str):
+    # Get distinct IDs of users who sent unread messages
+    sender_role_filter = "mother" if user_role == "midwife" else "midwife"
+    
+    # Group by sender_id
+    results = db.query(models.Message.sender_id).filter(
+        models.Message.receiver_id == user_id,
+        models.Message.sender_role == sender_role_filter,
+        models.Message.is_read == False
+    ).distinct().all()
+    
+    sender_ids = [r[0] for r in results]
+    
+    if not sender_ids:
+        return []
+        
+    unread_senders = []
+    if sender_role_filter == "mother":
+        users = db.query(models.Mother).filter(models.Mother.id.in_(sender_ids)).all()
+        for u in users:
+            unread_senders.append({"id": u.id, "name": u.full_name})
+    else:
+        users = db.query(models.Midwife).filter(models.Midwife.id.in_(sender_ids)).all()
+        for u in users:
+            unread_senders.append({"id": u.id, "name": u.full_name})
+            
+    return unread_senders
+
+            
+# ---------------------------------------------------------
+# ----------------------- ALERTS CRUD ---------------------
+# ---------------------------------------------------------
+
+def get_alerts_for_midwife(db: Session, midwife_id: int):
+    # Get active alerts for mothers belonging to this midwife
+    return db.query(models.Alert).join(models.Mother).filter(
+        models.Mother.midwife_id == midwife_id,
+        models.Alert.is_resolved == False
+    ).order_by(models.Alert.created_at.desc()).all()
+
+def get_active_alerts_for_mother(db: Session, mother_id: int):
+    return db.query(models.Alert).filter(
+        models.Alert.mother_id == mother_id,
+        models.Alert.is_resolved == False
+    ).order_by(models.Alert.created_at.desc()).all()
+
+def get_latest_health_tip(db: Session, mother_id: int):
+    # Returns the most recent alert message as a "Health Tip"
+    # Or multiple if preferred. Here we take the latest high priority one.
+    
+    # 1. Get Mother Name for personalization
+    mother = db.query(models.Mother).filter(models.Mother.id == mother_id).first()
+    mother_name = mother.full_name.split(" ")[0] if mother else "Mother"
+    
+    # 2. Find Highest Priority Active Alert
+    alert = db.query(models.Alert).filter(
+        models.Alert.mother_id == mother_id,
+        models.Alert.is_resolved == False
+    ).order_by(
+        models.Alert.severity.asc(), # High sorting logic if needed
+        models.Alert.created_at.desc()
+    ).first()
+    
+    if alert:
+        # Use Smart Tip Rotator instead of static message
+        day_of_year = datetime.now().timetuple().tm_yday
+        return RiskEngine.get_daily_tip(alert.alert_type, mother_name, day_of_year)
+        
+    return f"Hey {mother_name}, remember to drink plenty of water and attend your clinics regularly!"
+
+# ---------------------------------------------------------
+# ---------------- ADVANCED ANALYTICS (MONTHLY) -----------
+# ---------------------------------------------------------
+
+def get_analytics_hotspots(db: Session, moh_office_id: int):
+    # Groups High Risk mothers by PHI Area
+    # Returns: [{"area": "Area A", "count": 5}, ...]
+    
+    # Join Mother -> Midwife to filter by Office
+    # Join Mother -> PregnancyRecord to get phi_area
+    results = db.query(
+        models.PregnancyRecord.phi_area,
+        func.count(models.Mother.id)
+    ).join(models.Mother).join(models.Midwife).filter(
+        models.Midwife.moh_office_id == moh_office_id, # Strict Filter
+        models.Mother.risk_level == "High",
+        models.Mother.status == "Pregnant"
+    ).group_by(models.PregnancyRecord.phi_area).all()
+    
+    # Format
+    data = []
+    for area, count in results:
+        if area:
+            data.append({"area": area, "count": count})
+            
+    return sorted(data, key=lambda x: x['count'], reverse=True)[:5] # Top 5
+
+
+def get_analytics_defaulters(db: Session, moh_office_id: int):
+    # MOH PRIVACY VERSION: Returns Counts per Area
+    # Find High Risk Mothers who haven't had a visit in > 30 days
+    today = datetime.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    # 1. Get all High Risk Pregnant Mothers IN THIS OFFICE
+    risk_mothers = db.query(models.Mother).join(models.Midwife).filter(
+        models.Midwife.moh_office_id == moh_office_id, # Strict Filter
+        models.Mother.risk_level == "High",
+        models.Mother.status == "Pregnant"
+    ).all()
+    
+    area_counts = {}
+
+    for m in risk_mothers:
+        # 2. Get Last ANC Visit Date
+        last_visit = db.query(models.ANCVisit).filter(
+            models.ANCVisit.mother_id == m.id
+        ).order_by(models.ANCVisit.visit_date.desc()).first()
+        
+        last_seen = last_visit.visit_date if last_visit else (m.pregnancy_start_date or today)
+        
+        # 3. Check if > 30 days
+        if last_seen < thirty_days_ago:
+            # Get Area
+            rec = get_pregnancy_record_by_mother(db, m.id)
+            area = rec.phi_area if (rec and rec.phi_area) else "Unknown"
+            
+            if area in area_counts:
+                area_counts[area] += 1
+            else:
+                area_counts[area] = 1
+            
+    # Convert to list
+    result = [{"area": k, "count": v} for k, v in area_counts.items()]
+    return sorted(result, key=lambda x: x['count'], reverse=True)
+
+def get_analytics_forecast(db: Session, moh_office_id: int):
+    # MOH PRIVACY VERSION: Returns Weekly Aggregate Counts
+    today = datetime.now().date()
+    next_month = today + timedelta(days=30)
+    
+    # Join with Midwife to Filter by Office
+    results = db.query(models.Mother, models.PregnancyRecord).join(models.PregnancyRecord).join(models.Midwife).filter(
+        models.Midwife.moh_office_id == moh_office_id, # Strict Filter
+        models.Mother.risk_level == "High",
+        models.Mother.status == "Pregnant",
+        models.PregnancyRecord.edd >= today,
+        models.PregnancyRecord.edd <= next_month
+    ).all()
+    
+    # Group by Week Number (relative to today)
+    weekly_counts = {"Week 1": 0, "Week 2": 0, "Week 3": 0, "Week 4": 0}
+    
+    for m, rec in results:
+        days_until = (rec.edd - today).days
+        if days_until < 7:
+            weekly_counts["Week 1"] += 1
+        elif days_until < 14:
+            weekly_counts["Week 2"] += 1
+        elif days_until < 21:
+            weekly_counts["Week 3"] += 1
+        else:
+            weekly_counts["Week 4"] += 1
+            
+    return [{"week": k, "count": v} for k, v in weekly_counts.items() if v > 0]
+
+def get_moh_dashboard_stats(db: Session, moh_office_id: int):
+    # 1. Basic Stats
+    # STRICT FILTERING BY OFFICE
+    
+    # Midwives
+    midwives = db.query(models.Midwife).filter(
+        models.Midwife.moh_office_id == moh_office_id,
+        models.Midwife.is_active == True
+    ).all()
+    midwife_count = len(midwives)
+    midwife_ids = [m.id for m in midwives]
+    
+    # Active Mothers
+    active_mothers_count = db.query(models.Mother).filter(
+        models.Mother.midwife_id.in_(midwife_ids),
+        models.Mother.status.in_(["Pregnant", "Postnatal"])
+    ).count()
+    
+    # High Risk Cases
+    high_risk_count = db.query(models.Mother).filter(
+        models.Mother.midwife_id.in_(midwife_ids),
+        models.Mother.risk_level == "High",
+        models.Mother.status == "Pregnant"
+    ).count()
+    
+    # Pending Leave Requests
+    pending_leaves = db.query(models.LeaveRequest).filter(
+        models.LeaveRequest.midwife_id.in_(midwife_ids),
+        models.LeaveRequest.status == "Pending"
+    ).count()
+    
+    # 2. Growth Analytics (Last 6 Months)
+    # Midwife Growth - AGNOSTIC PYTHON GROUPING
+    today = datetime.now()
+    six_months_ago = today - timedelta(days=180)
+    
+    # Fetch raw data
+    midwives_growth_raw = db.query(models.Midwife).filter(
+        models.Midwife.moh_office_id == moh_office_id,
+        models.Midwife.created_at >= six_months_ago
+    ).all()
+    
+    mothers_growth_raw = db.query(models.Mother).filter(
+        models.Mother.midwife_id.in_(midwife_ids),
+        models.Mother.created_at >= six_months_ago
+    ).all()
+    
+    # Helper to group by month
+    from collections import defaultdict
+    def group_by_month(items):
+        grouped = defaultdict(int)
+        # Initialize last 6 months with 0
+        for i in range(5, -1, -1):
+            d = today - timedelta(days=i*30)
+            key = d.strftime("%Y-%m")
+            grouped[key] = 0
+            
+        for item in items:
+            if item.created_at:
+                key = item.created_at.strftime("%Y-%m")
+                if key in grouped:
+                    grouped[key] += 1
+        
+        # Sort and Format
+        sorted_keys = sorted(grouped.keys())
+        labels = [datetime.strptime(k, "%Y-%m").strftime("%b") for k in sorted_keys]
+        values = [grouped[k] for k in sorted_keys]
+        return {"labels": labels, "values": values}
+
+    charts = {
+        "midwife_growth": group_by_month(midwives_growth_raw),
+        "mother_growth": group_by_month(mothers_growth_raw)
+    }
+
+    # 3. Workload Leaderboard
+
+    # 3. Workload Leaderboard
+    # Top 5 Midwives by Patient Count
+    workload = db.query(
+        models.Midwife.username,
+        func.count(models.Mother.id)
+    ).join(models.Mother).filter(
+        models.Midwife.moh_office_id == moh_office_id,
+        models.Mother.status.in_(["Pregnant", "Postnatal"])
+    ).group_by(models.Midwife.username).order_by(func.count(models.Mother.id).desc()).limit(5).all()
+    
+    leaderboard = [{"name": w[0], "count": w[1]} for w in workload]
+
+    return {
+        "summary": {
+            "midwives": midwife_count,
+            "active_mothers": active_mothers_count,
+            "high_risk": high_risk_count,
+            "pending_leaves": pending_leaves
+        },
+        "charts": charts,
+        "leaderboard": leaderboard
+    }
+            
+    return [{"week": k, "count": v} for k, v in weekly_counts.items() if v > 0]
+
+# --- MIDWIFE SPECIFIC ANALYTICS (DETAILED) ---
+
+def get_midwife_defaulters(db: Session, midwife_id: int):
+    # Returns detailed list for specific midwife
+    today = datetime.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    risk_mothers = db.query(models.Mother).filter(
+        models.Mother.midwife_id == midwife_id, # Filter by Midwife
+        models.Mother.risk_level == "High",
+        models.Mother.status == "Pregnant"
+    ).all()
+    
+    defaulters = []
+    for m in risk_mothers:
+        last_visit = db.query(models.ANCVisit).filter(
+            models.ANCVisit.mother_id == m.id
+        ).order_by(models.ANCVisit.visit_date.desc()).first()
+        
+        last_seen = last_visit.visit_date if last_visit else (m.pregnancy_start_date or today)
+        
+        if last_seen < thirty_days_ago:
+            days_overdue = (today - last_seen).days
+            defaulters.append({
+                "id": m.id,
+                "name": m.full_name, # SHOW NAME
+                "days_overdue": days_overdue,
+                "last_seen": str(last_seen),
+                "contact": m.contact_number
+            })
+            
+    return defaulters
+
+def get_midwife_forecast(db: Session, midwife_id: int):
+    # Returns detailed list for specific midwife
+    today = datetime.now().date()
+    next_month = today + timedelta(days=30)
+    
+    results = db.query(models.Mother, models.PregnancyRecord).join(models.PregnancyRecord).filter(
+        models.Mother.midwife_id == midwife_id, # Filter by Midwife
+        models.Mother.risk_level == "High",
+        models.Mother.status == "Pregnant",
+        models.PregnancyRecord.edd >= today,
+        models.PregnancyRecord.edd <= next_month
+    ).all()
+    
+    forecast = []
+    for m, rec in results:
+        forecast.append({
+            "id": m.id,
+            "name": m.full_name, # SHOW NAME
+            "edd": str(rec.edd),
+            "risks": m.active_risks
+        })
+        
+    return sorted(forecast, key=lambda x: x['edd'])
             

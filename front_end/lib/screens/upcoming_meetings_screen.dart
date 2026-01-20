@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../models/appointment.dart';
-import '../theme/app_theme.dart';
 
 class UpcomingMeetingsScreen extends StatefulWidget {
   @override
@@ -21,11 +20,14 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text('Upcoming Meetings'),
-        backgroundColor: Colors.blueAccent,
+        // backgroundColor: Colors.blueAccent, // Handled by Theme
         elevation: 0,
       ),
       body: FutureBuilder<List<Appointment>>(
@@ -44,11 +46,15 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.calendar_today, size: 64, color: Colors.grey),
+                  Icon(
+                    Icons.calendar_today,
+                    size: 64,
+                    color: theme.disabledColor,
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'No upcoming meetings scheduled.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    style: TextStyle(fontSize: 16, color: theme.disabledColor),
                   ),
                 ],
               ),
@@ -65,11 +71,15 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_available, size: 64, color: Colors.grey),
+                  Icon(
+                    Icons.event_available,
+                    size: 64,
+                    color: theme.disabledColor,
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'No scheduled meetings found.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    style: TextStyle(fontSize: 16, color: theme.disabledColor),
                   ),
                 ],
               ),
@@ -83,6 +93,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
               final meeting = meetings[index];
               return Card(
                 elevation: 2,
+                color: theme.cardTheme.color,
                 margin: EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -94,7 +105,9 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                       Container(
                         padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blueAccent.withOpacity(0.1),
+                          color:
+                              (isDark ? Colors.blueAccent : Colors.blueAccent)
+                                  .withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
@@ -103,7 +116,9 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                               DateFormat('MMM').format(meeting.dateTime),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Colors.blueAccent,
+                                color: isDark
+                                    ? Colors.blueAccent.shade100
+                                    : Colors.blueAccent,
                               ),
                             ),
                             Text(
@@ -111,7 +126,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: theme.textTheme.bodyLarge?.color,
                               ),
                             ),
                           ],
@@ -127,7 +142,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                                color: theme.textTheme.bodyLarge?.color,
                               ),
                             ),
                             SizedBox(height: 4),
@@ -135,7 +150,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                               DateFormat('hh:mm a').format(meeting.dateTime),
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.grey[600],
+                                color: theme.textTheme.bodyMedium?.color,
                               ),
                             ),
                             if (meeting.notes != null &&
@@ -146,7 +161,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontStyle: FontStyle.italic,
-                                  color: Colors.grey[500],
+                                  color: theme.textTheme.bodySmall?.color,
                                 ),
                               ),
                             ],
@@ -156,7 +171,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                       Icon(
                         Icons.arrow_forward_ios,
                         size: 16,
-                        color: Colors.grey,
+                        color: theme.dividerColor,
                       ),
                     ],
                   ),

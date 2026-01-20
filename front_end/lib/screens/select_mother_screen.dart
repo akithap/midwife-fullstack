@@ -82,10 +82,11 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text("Select Mother"),
-        backgroundColor: Colors.teal,
+        // Remove hardcoded teal, let AppTheme handle it
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -129,12 +130,19 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
                       final mother = mothers[index];
                       return Card(
                         margin: EdgeInsets.symmetric(vertical: 4),
+                        // Card color handled by theme
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: Colors.teal,
+                            // Dynamic primary color
+                            backgroundColor: theme.primaryColor.withOpacity(
+                              0.2,
+                            ),
                             child: Text(
                               mother.fullName[0].toUpperCase(),
-                              style: TextStyle(color: Colors.white),
+                              style: TextStyle(
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           title: Text(
@@ -145,7 +153,7 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
                           trailing: Icon(
                             Icons.arrow_forward_ios,
                             size: 16,
-                            color: Colors.grey,
+                            color: theme.iconTheme.color?.withOpacity(0.5),
                           ),
                           onTap: () => _onMotherSelected(mother),
                         ),

@@ -11,6 +11,8 @@ from .database import SessionLocal, engine
 from datetime import date 
 
 from fastapi.staticfiles import StaticFiles
+import json
+import os
 
 # --- Auth Constants ---
 
@@ -30,6 +32,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount Static Files (MOH Website)
+import os
+# We assume uvicorn is run from 'Midwife back end' folder
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+else:
+    # Fallback for running from within sql_app or elsewhere
+    if os.path.exists("../static"):
+        app.mount("/static", StaticFiles(directory="../static", html=True), name="static")
 
 def get_db():
     db = SessionLocal()
@@ -125,6 +137,11 @@ def register_moh(moh: schemas.MOHOfficerCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="MOH Username already registered")
     return crud.create_moh_officer(db=db, moh=moh)
 
+# 1.5 Get Current MOH (Profile)
+@app.get("/moh/me", response_model=schemas.MOHOfficer)
+def read_moh_me(current_moh: schemas.MOHOfficer = Depends(get_current_moh)):
+    return current_moh
+
 # 2. MOH Login (Web Login)
 @app.post("/moh/token", response_model=schemas.Token)
 async def login_for_moh(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
@@ -159,8 +176,8 @@ def get_all_midwives_for_moh(
     db: Session = Depends(get_db),
     current_moh: schemas.MOHOfficer = Depends(get_current_moh)
 ):
-    # Currently returns all midwives; can be filtered by moh_area if needed later
-    return db.query(models.Midwife).all()
+    # Filter by the logged-in MOH's office ID (Strict Hierarchy)
+    return db.query(models.Midwife).filter(models.Midwife.moh_office_id == current_moh.moh_office_id).all()
 
 
 
@@ -443,6 +460,23 @@ def update_appointment(
     appt = db.query(models.Appointment).filter(models.Appointment.id == appointment_id).first()
     if not appt or appt.midwife_id != current_midwife.id:
         raise HTTPException(status_code=404, detail="Appointment not found")
+
+    # VALIDATION: Cannot complete if records are missing
+    if status_update.status == "Completed":
+        # Check Mother Status
+        if appt.mother.status == "Pregnant":
+            # Must have ANC visit
+            anc_visit = crud.get_anc_visit_by_appointment(db, appointment_id)
+            if not anc_visit:
+                print(f"DEBUG: Blocking Completion. Mother={appt.mother.id} (Pregnant), No ANC Visit.")
+                raise HTTPException(status_code=400, detail="Cannot mark as Completed. Please fill the ANC Record first.")
+                
+        elif appt.mother.status == "Postnatal":
+            # Must have PNC visit
+            pnc_visit = crud.get_pnc_visit_by_appointment(db, appointment_id)
+            if not pnc_visit:
+                print(f"DEBUG: Blocking Completion. Mother={appt.mother.id} (Postnatal), No PNC Visit.")
+                raise HTTPException(status_code=400, detail="Cannot mark as Completed. Please fill the PNC Record first.")
         
     return crud.update_appointment(db, appointment_id, status_update)
 
@@ -606,6 +640,94 @@ def report_delivery(
     updated_mother = crud.report_delivery(db, mother_id, data.delivery_date)
     return updated_mother
 
+@app.get("/midwives/me", response_model=schemas.Midwife)
+def read_users_me(current_midwife: schemas.Midwife = Depends(get_current_midwife)):
+    return current_midwife
+
+
+
+# --- CHAT ENDPOINTS ---
+
+@app.post("/midwives/messages/", response_model=schemas.Message)
+def send_message_as_midwife(
+    message: schemas.MessageCreate,
+    db: Session = Depends(get_db),
+    current_midwife: schemas.Midwife = Depends(get_current_midwife)
+):
+    # Midwife sending to Mother (receiver_id is Mother ID)
+    return crud.create_message(db, message, sender_id=current_midwife.id, sender_role="midwife")
+
+@app.post("/mothers/messages/", response_model=schemas.Message)
+def send_message_as_mother(
+    message: schemas.MessageCreate,
+    db: Session = Depends(get_db),
+    current_mother: schemas.Mother = Depends(get_current_mother)
+):
+    # Mother sending to Midwife (receiver_id is Midwife ID)
+    return crud.create_message(db, message, sender_id=current_mother.id, sender_role="mother")
+
+@app.get("/midwives/messages/{mother_id}", response_model=List[schemas.Message])
+def get_chat_history_midwife(
+    mother_id: int,
+    db: Session = Depends(get_db),
+    current_midwife: schemas.Midwife = Depends(get_current_midwife)
+):
+    return crud.get_chat_messages(db, user1_id=current_midwife.id, user1_role="midwife", user2_id=mother_id)
+
+@app.get("/mothers/messages/{midwife_id}", response_model=List[schemas.Message])
+def get_chat_history_mother(
+    midwife_id: int,
+    db: Session = Depends(get_db),
+    current_mother: schemas.Mother = Depends(get_current_mother)
+):
+    return crud.get_chat_messages(db, user1_id=current_mother.id, user1_role="mother", user2_id=midwife_id)
+
+@app.get("/mothers/messages/unread/count")
+def get_unread_count_mother(
+    db: Session = Depends(get_db),
+    current_mother: schemas.Mother = Depends(get_current_mother)
+):
+    return {"count": crud.get_unread_message_count(db, user_id=current_mother.id, user_role="mother")}
+
+@app.get("/mothers/messages/unread/senders", response_model=List[schemas.UnreadSender])
+def get_unread_senders_mother(
+    db: Session = Depends(get_db),
+    current_mother: schemas.Mother = Depends(get_current_mother)
+):
+    return crud.get_unread_senders(db, user_id=current_mother.id, user_role="mother")
+
+@app.put("/mothers/messages/{midwife_id}/read")
+def mark_messages_read_mother(
+    midwife_id: int,
+    db: Session = Depends(get_db),
+    current_mother: schemas.Mother = Depends(get_current_mother)
+):
+    crud.mark_chat_read(db, user_id=current_mother.id, user_role="mother", other_user_id=midwife_id)
+    return {"status": "success"}
+
+@app.get("/midwives/messages/unread/count")
+def get_unread_count_midwife(
+    db: Session = Depends(get_db),
+    current_midwife: schemas.Midwife = Depends(get_current_midwife)
+):
+    return {"count": crud.get_unread_message_count(db, user_id=current_midwife.id, user_role="midwife")}
+
+@app.get("/midwives/messages/unread/senders", response_model=List[schemas.UnreadSender])
+def get_unread_senders_midwife(
+    db: Session = Depends(get_db),
+    current_midwife: schemas.Midwife = Depends(get_current_midwife)
+):
+    return crud.get_unread_senders(db, user_id=current_midwife.id, user_role="midwife")
+
+@app.put("/midwives/messages/{mother_id}/read")
+def mark_messages_read_midwife(
+    mother_id: int,
+    db: Session = Depends(get_db),
+    current_midwife: schemas.Midwife = Depends(get_current_midwife)
+):
+    crud.mark_chat_read(db, user_id=current_midwife.id, user_role="midwife", other_user_id=mother_id)
+    return {"status": "success"}
+
 
 # new section added for the web ---
 
@@ -624,34 +746,129 @@ def get_mothers_by_risk(
     current_midwife: models.Midwife = Depends(get_current_midwife)
 ):
     # risk_type: "high_risk", "diabetes", "cardiac", "age", "pph", "gravidity"
+    # risk_type: "high_risk", "diabetes", "cardiac", "age", "pph", "gravidity"
+    # risk_type: "high_risk", "diabetes", "cardiac", "age", "pph", "gravidity"
     return crud.get_mothers_by_risk(db, current_midwife.id, risk_type)
+
+
+# --- MONTHLY ANALYTICS ENDPOINTS (MOH WEBSITE) ---
+
+@app.get("/moh/analytics/hotspots")
+def get_analytics_hotspots(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_hotspots(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/defaulters")
+def get_analytics_defaulters(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_defaulters(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/forecast")
+def get_analytics_forecast(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_forecast(db, current_moh.moh_office_id)
+
+@app.get("/moh/dashboard/stats")
+def get_moh_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_moh_dashboard_stats(db, current_moh.moh_office_id)
+
+# --- MIDWIFE ANALYTICS (DETAILED) ---
+
+@app.get("/midwives/analytics/defaulters")
+def get_midwife_defaulters(
+    db: Session = Depends(get_db),
+    current_midwife: models.Midwife = Depends(get_current_midwife)
+):
+    return crud.get_midwife_defaulters(db, current_midwife.id)
+
+@app.get("/midwives/analytics/forecast")
+def get_midwife_forecast(
+    db: Session = Depends(get_db),
+    current_midwife: models.Midwife = Depends(get_current_midwife)
+):
+    return crud.get_midwife_forecast(db, current_midwife.id)
+
+
+
+# --- RISK ALERT ENDPOINTS ---
+
+@app.get("/midwives/alerts", response_model=List[schemas.Alert])
+def get_alerts_dashboard(
+    db: Session = Depends(get_db),
+    current_midwife: models.Midwife = Depends(get_current_midwife)
+):
+    return crud.get_alerts_for_midwife(db, current_midwife.id)
+
+@app.get("/mothers/health-tip")
+def get_daily_health_tip(
+    db: Session = Depends(get_db),
+    current_mother: models.Mother = Depends(get_current_mother)
+):
+    # Returns personalized tip text
+    return {"content": crud.get_latest_health_tip(db, current_mother.id)}
+
+@app.get("/mothers/alerts", response_model=List[schemas.Alert])
+def get_my_alerts(
+    db: Session = Depends(get_db),
+    current_mother: models.Mother = Depends(get_current_mother)
+):
+    return crud.get_active_alerts_for_mother(db, current_mother.id)
 
 
 # --- TEMPORARY SEED ENDPOINT ---
 @app.get("/seed-moh")
 def seed_moh(db: Session = Depends(get_db)):
-    existing = crud.get_moh_officer_by_username(db, "moh_admin")
-    if existing:
-        # Force Reset Password
-        existing.hashed_password = crud.get_password_hash("password123")
-        db.commit()
-        return {"message": "User 'moh_admin' exists. PASSWORD RESET to: password123"}
-    
-
-@app.get("/seed-moh")
-def seed_moh(db: Session = Depends(get_db)):
-    # 1. Check if MOH Admin exists
+    # Check if MOH Admin exists
     moh = crud.get_moh_officer_by_username(db, "moh_admin")
-    if not moh:
-        moh_data = schemas.MOHOfficerCreate(
-            username="moh_admin",
-            password="password123",
-            full_name="System Admin",
-            moh_area="Colombo"
-        )
-        crud.create_moh_officer(db, moh_data)
-        return {"message": "Created MOH Admin: moh_admin / password123"}
-    return {"message": "MOH Admin already exists"}
+    if moh:
+        # Reset Password to '123' for consistency with dashboard seed
+        moh.hashed_password = crud.get_password_hash("123")
+        db.commit()
+        return {"message": "User 'moh_admin' exists. PASSWORD RESET to: 123"}
+
+    # Create if not exists
+    moh_data = schemas.MOHOfficerCreate(
+        username="moh_admin",
+        password="123",
+        full_name="System Admin",
+        moh_area="Colombo"
+    )
+    crud.create_moh_officer(db, moh_data)
+    return {"message": "Created MOH Admin: moh_admin / 123"}
+
+@app.get("/moh-offices")
+def get_moh_offices():
+    # File is in the parent directory of sql_app (which is where main.py is, but python runs from root usually)
+    # If running from 'Midwife back end', then moh_offices.json is in current dir.
+    # main.py is in sql_app/main.py.
+    
+    # Try different paths to be safe
+    paths = ["moh_offices.json", "../moh_offices.json", "Midwife back end/moh_offices.json"]
+    
+    for path in paths:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return json.load(f)
+                
+    # Fallback: Try relative to this file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir) # Midwife back end
+    file_path = os.path.join(parent_dir, "moh_offices.json")
+    
+    if os.path.exists(file_path):
+         with open(file_path, "r") as f:
+                return json.load(f)
+
+    raise HTTPException(status_code=404, detail=f"MOH Data File not found. Searched in: {paths} and {file_path}")
 
 @app.get("/seed-leave")
 def seed_leave(db: Session = Depends(get_db)):
@@ -752,6 +969,153 @@ def seed_dashboard(db: Session = Depends(get_db)):
         db.commit()
 
     return {"message": "Seeded Dashboard: 1 Midwife, 5 Mothers, 3 Appointments, 1 MOH Officer (moh_admin)"}
+
+@app.get("/seed-full-flow")
+def seed_full_flow(db: Session = Depends(get_db)):
+    # 1. Ensure Midwife
+    midwife = crud.get_midwife_by_username(db, "test_midwife")
+    if not midwife:
+        midwife = models.Midwife(
+            username="test_midwife",
+            hashed_password=crud.get_password_hash("123"),
+            full_name="Test Midwife",
+            nic="700000000V",
+            assigned_moh_area="Colombo"
+        )
+        db.add(midwife)
+        db.commit()
+        db.refresh(midwife)
+    
+    # Helper to create mother if not exists
+    def create_mother_if_not_exists(nic, name, status, risk="Low", start_date=None, delivery_date=None):
+        m = crud.get_mother_by_nic(db, nic)
+        if not m:
+            m = models.Mother(
+                nic=nic, 
+                full_name=name, 
+                hashed_password=crud.get_password_hash("123"),
+                midwife_id=midwife.id,
+                status=status,
+                risk_level=risk,
+                pregnancy_start_date=start_date,
+                delivery_date=delivery_date,
+                contact_number="0771234567",
+                address="123 Test St, Combo"
+            )
+            db.add(m)
+            db.commit()
+            db.refresh(m)
+        return m
+
+    today = datetime.now().date()
+    
+    # 2. Mother A: Early Pregnancy (12 Weeks)
+    m_early = create_mother_if_not_exists("900000001V", "Mother Early (12w)", "Pregnant", "Low", today - timedelta(weeks=12))
+    if not m_early.pregnancy_records:
+        pr = models.PregnancyRecord(
+            mother_id=m_early.id,
+            registration_date=today - timedelta(weeks=10),
+            lrmp=today - timedelta(weeks=12),
+            edd=today + timedelta(weeks=28),
+            gravidity=1, parity=0
+        )
+        db.add(pr)
+        db.commit()
+        # Add 1 Completed ANC Visit
+        appt = models.Appointment(midwife_id=midwife.id, mother_id=m_early.id, date_time=datetime.now() - timedelta(weeks=2), visit_type="Clinic", status="Completed")
+        db.add(appt)
+        db.commit()
+        db.refresh(appt)
+        anc = models.ANCVisit(mother_id=m_early.id, appointment_id=appt.id, visit_date=appt.date_time.date(), poa_weeks="10", weight_kg=55.0, bp_systolic=110, bp_diastolic=70)
+        db.add(anc)
+        db.commit()
+    
+    # 3. Mother B: Late Pregnancy (36 Weeks) - Multiple Visits
+    m_late = create_mother_if_not_exists("900000002V", "Mother Late (36w)", "Pregnant", "Low", today - timedelta(weeks=36))
+    if not m_late.pregnancy_records:
+        pr = models.PregnancyRecord(
+             mother_id=m_late.id,
+             lrmp=today - timedelta(weeks=36),
+             edd=today + timedelta(weeks=4),
+             gravidity=2, parity=1
+        )
+        db.add(pr)
+        db.commit()
+        # Backfill 5 visits
+        for i in range(5):
+            weeks_ago = 20 - (i*4) # 20, 16, 12, 8, 4 weeks ago
+            if weeks_ago < 0: continue
+            
+            appt = models.Appointment(midwife_id=midwife.id, mother_id=m_late.id, date_time=datetime.now() - timedelta(weeks=weeks_ago), visit_type="Clinic", status="Completed")
+            db.add(appt)
+            db.commit()
+            db.refresh(appt)
+            
+            # Growth curve data
+            poa = 36 - weeks_ago
+            anc = models.ANCVisit(
+                mother_id=m_late.id, appointment_id=appt.id, visit_date=appt.date_time.date(), 
+                poa_weeks=str(poa), 
+                weight_kg=60.0 + i, # Gaining 1kg per visit
+                fundal_height_cm=20.0 + i*2 # Growing
+            )
+            db.add(anc)
+            db.commit()
+
+    # 4. Mother C: Postnatal (Day 5)
+    delivery_d = today - timedelta(days=5)
+    m_pnc = create_mother_if_not_exists("900000003V", "Mother PNC (Day 5)", "Postnatal", "Low", today - timedelta(weeks=40), delivery_d)
+    if not m_pnc.delivery_records:
+        dr = models.DeliveryRecord(
+            mother_id=m_pnc.id,
+            delivery_date=datetime.combine(delivery_d, datetime.min.time()),
+            delivery_mode="Normal",
+            birth_weight=3.2,
+            vitamin_a_given=True
+        )
+        db.add(dr)
+        db.commit()
+        # Add PNC Visit
+        appt = models.Appointment(midwife_id=midwife.id, mother_id=m_pnc.id, date_time=datetime.now(), visit_type="Home Visit", status="Completed")
+        db.add(appt)
+        db.commit()
+        db.refresh(appt)
+        pnc = models.PNCVisit(
+            mother_id=m_pnc.id, appointment_id=appt.id, visit_date=appt.date_time.date(),
+            baby_weight=3.1, baby_color="Pink", breastfeeding="Establishing well"
+        )
+        db.add(pnc)
+        db.commit()
+
+    # 5. Mother D: High Risk (Hypertension)
+    m_risk = create_mother_if_not_exists("900000004V", "Mother High Risk", "Pregnant", "High Risk", today - timedelta(weeks=20))
+    if not m_risk.pregnancy_records:
+        pr = models.PregnancyRecord(
+            mother_id=m_risk.id,
+            lrmp=today - timedelta(weeks=20),
+            edd=today + timedelta(weeks=20),
+            risk_cardiac=True, # Hypertension often grouped or specific, using cardiac/other for now or just generic risk
+            other_risk_factors="Hypertension" # Custom
+        )
+        # Update mother risk level explicitly
+        m_risk.risk_level = "High Risk"
+        db.add(pr)
+        db.add(m_risk)
+        db.commit()
+
+    # 6. Mother E: Eligible
+    create_mother_if_not_exists("900000005V", "Mother Eligible", "Eligible")
+
+    return {"message": "Full System Flow Seeded! Accounts: 900000001V to 900000005V (Password: 123)"}
+
+# --- REPORTING ENDPOINTS ---
+
+@app.get("/reports/stats")
+def read_moh_stats(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_moh_reports(db, moh_office_id=current_moh.moh_office_id)
 
 # This tells FastAPI: "If someone goes to http://localhost:8000/static/login.html, show them that file."
 app.mount("/static", StaticFiles(directory="static"), name="static")

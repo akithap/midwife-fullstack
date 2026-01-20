@@ -8,30 +8,34 @@ import '../models/antenatal_plan.dart';
 import '../models/appointment.dart';
 import '../models/leave_request.dart';
 import '../models/mother.dart';
-// import '../models/health_record.dart'; // Unused
+import '../models/message.dart';
+import '../models/alert.dart'; // NEW
+import '../models/midwife.dart'; // NEW
 import '../enums/user_role.dart';
+import 'sync_service.dart';
+import 'database_helper.dart';
+
+// --- NEW: MOH Office Response ---
+// No specific model needed if we return Map<String, dynamic> directly for the JSON structure
 
 class ApiService {
+  final SyncService _syncService = SyncService();
+  final DatabaseHelper _db = DatabaseHelper();
+
   // CRITICAL: Auto-detect environment
   // Windows/Web/iOS (Simulator): localhost
   // Android Emulator: 10.0.2.2
   static String get _baseUrl {
     if (kIsWeb) {
-      // If deployed (Release Mode), use the Live Backend
       if (kReleaseMode) {
-        return 'https://midwife-backend-three.vercel.app';
+        return 'https://midwife-backend-1207eer98-akithas-projects-04f8a73b.vercel.app';
       }
-      // If debugging locally, use Localhost
       return 'http://127.0.0.1:8000';
     } else {
-      // Assuming Android Emulator for mobile testing
       return 'http://10.0.2.2:8000';
     }
   }
 
-  // ----------------------------------------------------------------------
-  // HELPER: Get Headers (with Token)
-  // ----------------------------------------------------------------------
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
@@ -42,7 +46,7 @@ class ApiService {
   }
 
   // ----------------------------------------------------------------------
-  // AUTHENTICATION (Login)
+  // AUTHENTICATION (Login) - RESTORED
   // ----------------------------------------------------------------------
   Future<bool> midwifeLogin(String username, String password) async {
     try {
@@ -99,9 +103,6 @@ class ApiService {
     String password,
     UserRole role,
   ) async {
-    // Wrapper for specific logins if needed, or use specific methods above.
-    // Based on AuthProvider, it uses midwifeLogin/motherLogin directly.
-    // But if any code uses generic login, here it is:
     bool success = false;
     if (role == UserRole.midwife) {
       success = await midwifeLogin(username, password);
@@ -110,37 +111,45 @@ class ApiService {
     }
     if (success) {
       final prefs = await SharedPreferences.getInstance();
-      return {'access_token': prefs.getString('token')}; // Mock return
+      return {'access_token': prefs.getString('token')};
     }
     throw Exception('Login failed');
   }
 
-  // ----------------------------------------------------------------------
-  // MOTHERS (Midwife manages Mothers)
-  // ----------------------------------------------------------------------
+  // --- MOTHERS ---
+
   Future<List<Mother>> getMothers({String? query}) async {
-    // Note: original code returned List<dynamic>, now typed List<Mother>
-    // but UI screens might expect dynamic. Let's revert to List<dynamic> or fix screens.
-    // Based on errors "getMothers" wasn't complained about, but let's be safe.
-    // The previous getMothers (Step 530) returned List<dynamic>.
-    // My new getMothers (Step 532) returned List<Mother>.
-    // If screens use it, they might need update.
-    // `MotherListScreen` likely casts it.
-    // Let's stick to List<Mother> as it is cleaner, but if `MotherListScreen` breaks...
-    // Actually, `MotherListScreen` errors: "The named parameter 'query' isn't defined".
-    // My Step 530 had `getMothers({String? query})`. My Step 532 had `getMothers({String? search})`.
-    // I should match `query`.
     final headers = await _getHeaders();
-    String url = "$_baseUrl/mothers/";
+    String endpoint = "/mothers/";
     if (query != null && query.isNotEmpty) {
-      url += "?search=$query";
+      endpoint += "?search=$query";
     }
-    final response = await http.get(Uri.parse(url), headers: headers);
-    if (response.statusCode == 200) {
-      List<dynamic> body = jsonDecode(response.body);
+    String url = "$_baseUrl$endpoint";
+
+    if (_syncService.isOnline) {
+      // ONLINE: Fetch & Cache
+      try {
+        final response = await http.get(Uri.parse(url), headers: headers);
+        if (response.statusCode == 200) {
+          // Cache the response
+          await _db.cacheResponse(endpoint, response.body);
+
+          List<dynamic> body = jsonDecode(response.body);
+          return body.map((item) => Mother.fromJson(item)).toList();
+        }
+      } catch (e) {
+        print("Network failed, trying cache...");
+      }
+    }
+
+    // OFFLINE or FAIL: Read Cache
+    final cached = await _db.getCachedResponse(endpoint);
+    if (cached != null) {
+      List<dynamic> body = jsonDecode(cached);
       return body.map((item) => Mother.fromJson(item)).toList();
     }
-    throw Exception('Failed to load mothers');
+
+    throw Exception('Failed to load mothers (Offline & No Cache)');
   }
 
   // NEW: Get Current Mother Profile (for Mother Portal)
@@ -380,10 +389,9 @@ class ApiService {
 
   Future<List<Appointment>> getMidwifeAppointments({DateTime? date}) async {
     final headers = await _getHeaders();
-    String url = '$_baseUrl/appointments/';
+    String endpoint = '/appointments/';
 
     if (date != null) {
-      // Filter by specific day
       final start = DateTime(date.year, date.month, date.day).toIso8601String();
       final end = DateTime(
         date.year,
@@ -393,17 +401,34 @@ class ApiService {
         59,
         59,
       ).toIso8601String();
-      url += '?start_date=$start&end_date=$end';
+      endpoint += '?start_date=$start&end_date=$end';
     }
 
-    final response = await http.get(Uri.parse(url), headers: headers);
+    String url = '$_baseUrl$endpoint';
 
-    if (response.statusCode == 200) {
-      List<dynamic> body = json.decode(response.body);
+    if (_syncService.isOnline) {
+      try {
+        final response = await http.get(Uri.parse(url), headers: headers);
+        if (response.statusCode == 200) {
+          await _db.cacheResponse(endpoint, response.body);
+          List<dynamic> body = json.decode(response.body);
+          return body
+              .map((dynamic item) => Appointment.fromJson(item))
+              .toList();
+        }
+      } catch (e) {
+        print("Network failed, checking cache...");
+      }
+    }
+
+    // OFFLINE
+    final cached = await _db.getCachedResponse(endpoint);
+    if (cached != null) {
+      List<dynamic> body = jsonDecode(cached);
       return body.map((dynamic item) => Appointment.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load midwife appointments');
     }
+
+    throw Exception('Failed to load midwife appointments (Offline)');
   }
 
   // For Midwife: "Schedule Appointments" (Create)
@@ -419,24 +444,27 @@ class ApiService {
     Appointment appointment, [
     int? motherId,
   ]) async {
-    // If motherId is provided, use it (new logic).
-    // If not, maybe it's in appointment?
-    // Old logic: just passed appointment.toJson().
-    // Let's try to handle both.
     int? mId = motherId ?? appointment.motherId;
+    String endpoint = '/appointments/?mother_id=$mId';
+    String url = '$_baseUrl$endpoint';
 
-    final headers = await _getHeaders();
-    // If mId is null, we can't create?
-    // The backend expects mother_id query param.
-    // Removed unnecessary null check as mId should be non-null.
-    String url = '$_baseUrl/appointments/?mother_id=$mId';
+    if (_syncService.isOnline) {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: json.encode(appointment.toJson()),
+      );
+      if (response.statusCode == 200) return true;
+    }
 
-    final response = await http.post(
-      Uri.parse(url),
-      headers: headers,
-      body: json.encode(appointment.toJson()),
-    );
-    return response.statusCode == 200;
+    // OFFLINE: Queue it
+    if (!_syncService.isOnline) {
+      await _syncService.queueRequest('POST', endpoint, appointment.toJson());
+      return true; // "Saved successfully" (to outbox)
+    }
+
+    return false;
   }
 
   Future<bool> updateAppointment(int id, Map<String, dynamic> data) async {
@@ -445,7 +473,20 @@ class ApiService {
       headers: await _getHeaders(),
       body: jsonEncode(data),
     );
-    return response.statusCode == 200;
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      // Parse error message
+      String errorMsg = "Failed to update appointment";
+      try {
+        final body = jsonDecode(response.body);
+        if (body is Map && body.containsKey('detail')) {
+          errorMsg = body['detail'];
+        }
+      } catch (_) {}
+      throw Exception(errorMsg);
+    }
   }
 
   // NEW: Delete Appointment
@@ -460,12 +501,26 @@ class ApiService {
 
   // ANC VISITS
   Future<bool> createANCVisit(Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse("$_baseUrl/anc-visits/"),
-      headers: await _getHeaders(),
-      body: jsonEncode(data),
-    );
-    return response.statusCode == 200;
+    String endpoint = '/anc-visits/';
+    String url = '$_baseUrl$endpoint';
+
+    if (_syncService.isOnline) {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200) return true;
+    }
+
+    // OFFLINE
+    if (!_syncService.isOnline) {
+      await _syncService.queueRequest('POST', endpoint, data);
+      return true; // Saved to Outbox
+    }
+
+    return false;
   }
 
   Future<Map<String, dynamic>?> getANCVisit(int appointmentId) async {
@@ -494,17 +549,31 @@ class ApiService {
   // PNC VISITS
   // ----------------------------------------------------------------------
 
+  // PNC VISITS
   Future<Map<String, dynamic>?> createPNCVisit(
     Map<String, dynamic> data,
   ) async {
-    final response = await http.post(
-      Uri.parse("$_baseUrl/pnc-visits/"),
-      headers: await _getHeaders(),
-      body: jsonEncode(data),
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
+    String endpoint = '/pnc-visits/';
+    String url = '$_baseUrl$endpoint';
+
+    if (_syncService.isOnline) {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
     }
+
+    // OFFLINE
+    if (!_syncService.isOnline) {
+      await _syncService.queueRequest('POST', endpoint, data);
+      return data; // Return local data pretending success
+    }
+
     return null;
   }
 
@@ -592,6 +661,7 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
+      print("DEBUG STATS RESPONSE: ${response.body}");
       return Map<String, int>.from(json.decode(response.body));
     } else {
       throw Exception('Failed to load stats');
@@ -670,6 +740,242 @@ class ApiService {
     } catch (e) {
       print("Error fetching mothers by risk: $e");
       return [];
+    }
+  }
+
+  // ----------------------------------------------------------------------
+  // CHAT (POLLING)
+  // ----------------------------------------------------------------------
+
+  Future<bool> sendMessage(
+    int receiverId,
+    String content,
+    UserRole role,
+  ) async {
+    // Determine Endpoint based on Sender Role
+    String endpoint = role == UserRole.midwife
+        ? "/midwives/messages/"
+        : "/mothers/messages/";
+
+    final response = await http.post(
+      Uri.parse("$_baseUrl$endpoint"),
+      headers: await _getHeaders(),
+      body: jsonEncode({"receiver_id": receiverId, "content": content}),
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<List<Message>> getChatMessages(int otherUserId, UserRole role) async {
+    // Determine Endpoint based on My Role
+    // If I am Midwife, I call /midwives/messages/{mother_id}
+    // If I am Mother, I call /mothers/messages/{midwife_id}
+
+    String endpoint = role == UserRole.midwife
+        ? "/midwives/messages/$otherUserId"
+        : "/mothers/messages/$otherUserId";
+
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl$endpoint"),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> body = jsonDecode(response.body);
+        return body.map((item) => Message.fromJson(item)).toList();
+      }
+    } catch (e) {
+      print("Chat Polling Error: $e");
+      return [];
+    }
+    return [];
+  }
+
+  // --- MIDWIFE ANALYTICS (Actionable) ---
+  Future<List<dynamic>> getMidwifeDefaulters() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/midwives/analytics/defaulters"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching defaulters: $e");
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getMidwifeForecast() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/midwives/analytics/forecast"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      print("Error fetching forecast: $e");
+      return [];
+    }
+  }
+
+  Future<int> getUnreadMessageCount() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/midwives/messages/unread/count"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['count'];
+      }
+    } catch (e) {
+      print("Error fetching unread count: $e");
+    }
+    return 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getUnreadSenders() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/midwives/messages/unread/senders"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+    } catch (e) {
+      print("Error fetching unread senders: $e");
+    }
+    return [];
+  }
+
+  Future<void> markChatRead(int motherId) async {
+    try {
+      await http.put(
+        Uri.parse("$_baseUrl/midwives/messages/$motherId/read"),
+        headers: await _getHeaders(),
+      );
+    } catch (e) {
+      print("Error marking chat read: $e");
+    }
+  }
+
+  // --- MOTHER CHAT METHODS ---
+  Future<int> getUnreadMessageCountMother() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/mothers/messages/unread/count"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['count'];
+      }
+    } catch (e) {
+      print("Error fetching mother unread count: $e");
+    }
+    return 0;
+  }
+
+  Future<List<Map<String, dynamic>>> getUnreadSendersMother() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/mothers/messages/unread/senders"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+    } catch (e) {
+      print("Error fetching mother unread senders: $e");
+    }
+    return [];
+  }
+
+  Future<void> markChatReadMother(int midwifeId) async {
+    try {
+      await http.put(
+        Uri.parse("$_baseUrl/mothers/messages/$midwifeId/read"),
+        headers: await _getHeaders(),
+      );
+    } catch (e) {
+      print("Error marking mother chat read: $e");
+    }
+  }
+
+  // --- MIDWIFE PROFILE ---
+  Future<Midwife?> getMidwifeProfile() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/midwives/me"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return Midwife.fromJson(jsonDecode(response.body));
+      }
+      return null;
+    } catch (e) {
+      print("Error fetching midwife profile: $e");
+      return null;
+    }
+  }
+
+  // --- RISK ALERT APIs ---
+
+  Future<List<Alert>> getMidwifeAlerts() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/midwives/alerts'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => Alert.fromJson(json)).toList();
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching alerts: $e');
+      return [];
+    }
+  }
+
+  Future<String> getHealthTip() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/mothers/health-tip'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['content'] ?? "Stay healthy!";
+      } else {
+        return "Enjoy your day!";
+      }
+    } catch (e) {
+      return "Remember to drink plenty of water.";
+    }
+  }
+
+  // --- NEW: Get All MOH Offices (Hierarchical JSON) ---
+  Future<Map<String, dynamic>> getAllMOHOffices() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/moh-offices'));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      print("Failed to load MOH Offices: ${response.statusCode}");
+      return {};
+    } catch (e) {
+      print("Error fetching MOH Offices: $e");
+      return {};
     }
   }
 }

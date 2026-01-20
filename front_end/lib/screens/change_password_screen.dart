@@ -64,10 +64,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text('Change Password'),
-        backgroundColor: Colors.pink,
+        // backgroundColor: Colors.pink, // Handled by Theme
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -116,7 +117,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       onPressed: _changePassword,
                       child: Text('UPDATE PASSWORD'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.pink,
+                        backgroundColor: theme.brightness == Brightness.dark
+                            ? theme.colorScheme.secondary
+                            : Colors.pink,
                         foregroundColor: Colors.white,
                         padding: EdgeInsets.symmetric(
                           vertical: 16,

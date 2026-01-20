@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Rakawaranaya</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./home.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- HTML2PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        .report-controls {
+            display: flex;
+            justify-content: flex-end;
+            margin: 20px;
+        }
+
+        .btn-export {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-title {
+            margin: 20px 20px 10px 20px;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="main-header">
+        <div class="header-container">
+            <a href="home.html" class="logo-area">
+                <img src="logo.jpg" alt="Rakawaranaya Logo" class="logo-img">
+                <div class="logo-text">Rakawaranaya<span>Official Portal</span></div>
+            </a>
+            <nav class="nav-links">
+                <a href="home.html" class="nav-link">Home</a>
+                <a href="midwifereg.html" class="nav-link">Midwife Management</a>
+                <a href="leaverequests.html" class="nav-link">Leave Requests</a>
+                <a href="moh_reports.html" class="nav-link active">Reports</a>
+            </nav>
+            <div class="user-menu">
+                <div class="user-avatar" onclick="logout()" style="cursor: pointer;" title="Logout">DR</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content" id="report-content">
+        <div class="report-controls">
+            <button class="btn-export" onclick="exportPDF()">
+                <i class="fas fa-file-pdf"></i> Export Report
+            </button>
+        </div>
+
+        <section class="hero-section" style="padding: 20px;">
+            <div class="hero-text">
+                <h1>Monthly Health Report</h1>
+                <p>MOH Area Statistics: <span id="mohAreaName">Loading...</span> | <span id="currentMonth"></span></p>
+            </div>
+        </section>
+
+        <!-- Summary Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">Total Active Mothers</span>
+                    <span class="stat-number" id="totalActive">...</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">High Risk Cases</span>
+                    <span class="stat-number" id="totalHighRisk" style="color: #e74c3c;">...</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-info">
+                    <span class="stat-label">Deliveries (This Month)</span>
+                    <span class="stat-number" id="monthlyDeliveries" style="color: #27ae60;">...</span>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="section-title">Regional Risk Analysis</h2>
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>Risk Hotspots (By PHI Area)</h3>
+                <canvas id="hotspotsChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Top Health Issues</h3>
+                <canvas id="riskBarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- NEW SECTIONS -->
+        <div class="charts-container">
+            <!-- Silent Risk Detector -->
+            <div class="chart-card" style="overflow-x: auto;">
+                <h3 style="color: #c0392b;">Silent Risk Detector (Defaulters)</h3>
+                <p style="font-size: 12px; color: grey;">High Risk mothers with no clinic visit > 30 days</p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <thead>
+                        <tr style="background: #f8f9fa; text-align: left;">
+                            <th style="padding: 8px;">PHI Area</th>
+                            <th style="padding: 8px;">Defaulter Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="defaultersTable">
+                        <tr>
+                            <td colspan="2" style="padding: 10px; text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Delivery Forecast -->
+            <div class="chart-card" style="overflow-x: auto;">
+                <h3 style="color: #2980b9;">Delivery Forecast (Next 30 Days)</h3>
+                <p style="font-size: 12px; color: grey;">Upcoming High Risk Deliveries (Weekly)</p>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <thead>
+                        <tr style="background: #f8f9fa; text-align: left;">
+                            <th style="padding: 8px;">Week</th>
+                            <th style="padding: 8px;">Expected Deliveries</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecastTable">
+                        <tr>
+                            <td colspan="2" style="padding: 10px; text-align: center;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const token = localStorage.getItem('moh_token');
+        if (!token) window.location.href = 'login.html';
+
+        document.getElementById('currentMonth').innerText = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        function logout() {
+            localStorage.removeItem('moh_token');
+            window.location.href = 'login.html';
+        }
+
+        async function loadData() {
+            try {
+                // 0. Get MOH Details
+                const resMe = await fetch('/moh/me', { headers: { 'Authorization': 'Bearer ' + token } });
+                if (resMe.ok) {
+                    const me = await resMe.json();
+                    // Use moh_area (which we synced to be Office Name)
+                    document.getElementById('mohAreaName').innerText = me.moh_area || "Unknown Area";
+                }
+
+                // 1. General Stats (Converted to Monthly in Backend)
+                const resStats = await fetch('/reports/stats', { headers: { 'Authorization': 'Bearer ' + token } });
+
+                // 2. Advanced Analytics
+                const resHotspots = await fetch('/moh/analytics/hotspots', { headers: { 'Authorization': 'Bearer ' + token } });
+                const resDefaulters = await fetch('/moh/analytics/defaulters', { headers: { 'Authorization': 'Bearer ' + token } });
+                const resForecast = await fetch('/moh/analytics/forecast', { headers: { 'Authorization': 'Bearer ' + token } });
+
+                if (resStats.status === 401) { logout(); return; }
+
+                if (resStats.ok) renderDashboard(await resStats.json());
+                if (resHotspots.ok) renderHotspots(await resHotspots.json());
+                if (resDefaulters.ok) renderDefaulters(await resDefaulters.json());
+                if (resForecast.ok) renderForecast(await resForecast.json());
+
+            } catch (e) {
+                console.error("Error loading reports:", e);
+                document.getElementById('defaultersTable').innerHTML = '<tr><td colspan="2">Failed to load</td></tr>';
+            }
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('totalActive').innerText = (data.population.pregnant + data.population.postnatal) || 0;
+            document.getElementById('totalHighRisk').innerText = data.risks.high || 0;
+            document.getElementById('monthlyDeliveries').innerText = data.weekly.deliveries || 0; // Backend now returns monthly here
+            document.getElementById('monthlyDeliveries').innerText = data.weekly.deliveries || 0; // Backend now returns monthly here
+
+            // Existing Risk Factors Chart
+            const factors = data.risks.factors;
+            new Chart(document.getElementById('riskBarChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Teenage', 'Adv Age', 'Diabetes', 'Hypertension', 'Cardiac', 'Grand Multi'],
+                    datasets: [{
+                        label: 'Cases',
+                        data: [factors.teen_pregnancy, factors.advanced_age, factors.diabetes, factors.hypertension, factors.cardiac, factors.grand_multipara],
+                        backgroundColor: '#3498db'
+                    }]
+                }
+            });
+        }
+
+        function renderHotspots(data) {
+            // data = [{area: "A", count: 5}, ...]
+            const labels = data.map(d => d.area);
+            const counts = data.map(d => d.count);
+
+            new Chart(document.getElementById('hotspotsChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
+                    }]
+                }
+            });
+        }
+
+        function renderDefaulters(data) {
+            // Data = [{area: "Kadawatha", count: 5}]
+            const tbody = document.getElementById('defaultersTable');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">No defaulters found. Good!</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(d => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">${d.area}</td>
+                    <td style="padding: 8px; color: red; font-weight: bold;">${d.count} Mothers</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderForecast(data) {
+            // Data = [{week: "Week 1", count: 3}]
+            const tbody = document.getElementById('forecastTable');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">No high risk deliveries soon.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(d => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">${d.week}</td>
+                    <td style="padding: 8px; font-weight: bold; color: #2980b9;">${d.count} Expected</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('report-content');
+            const opt = {
+                margin: 0.5,
+                filename: 'MOH_Monthly_Report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            document.querySelector('.btn-export').style.display = 'none';
+            html2pdf().set(opt).from(element).save().then(() => {
+                document.querySelector('.btn-export').style.display = 'flex';
+            });
+        }
+
+
+        loadData();
+    </script>
+</body>
+
+</html>
