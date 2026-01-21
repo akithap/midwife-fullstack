@@ -44,6 +44,28 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
+@app.get("/setup_admin")
+def setup_admin_user(db: Session = Depends(get_db)):
+    # 1. Check if MOH Admin exists
+    existing_admin = crud.get_moh_officer_by_username(db, "moh_admin")
+    if existing_admin:
+        return {"status": "exists", "message": "User 'moh_admin' already exists."}
+    
+    # 2. Create MOH Admin
+    new_admin = schemas.MOHOfficerCreate(
+        username="moh_admin",
+        password="admin123",
+        full_name="System Admin",
+        email="admin@moh.gov.lk",
+        moh_office_id=1
+    )
+    
+    try:
+        created_user = crud.create_moh_officer(db, new_admin)
+        return {"status": "created", "username": created_user.username, "message": "Admin user created successfully. Login with 'admin123'."}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 # We assume uvicorn is run from 'Midwife back end' folder
 # We assume uvicorn is run from 'Midwife back end' folder
 if os.path.exists("static"):
