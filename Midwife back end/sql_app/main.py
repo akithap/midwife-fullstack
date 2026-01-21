@@ -35,6 +35,16 @@ app.add_middleware(
 
 # Mount Static Files (MOH Website)
 import os
+
+@app.get("/")
+def read_root():
+    return {"status": "active", "message": "Midwife Backend API is running. Go to /static/login.html to log in."}
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+# We assume uvicorn is run from 'Midwife back end' folder
 # We assume uvicorn is run from 'Midwife back end' folder
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static", html=True), name="static")
