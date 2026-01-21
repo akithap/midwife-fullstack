@@ -21,14 +21,15 @@ elif SQLALCHEMY_DATABASE_URL.startswith("mysql+mysqlconnector://"):
 # OPTIMIZATION FOR VERCEL / SERVERLESS:
 # 1. pool_pre_ping=True: Checks connection liveliness before using it (prevents "Gone Away" errors).
 # 2. pool_recycle=300: Recycles connections every 5 minutes (TiDB/MySQL defaults often kill idle ones).
+# 3. SSL: TiDB requires SSL. Passing an empty dict or specific config triggers PyMySQL to use system CAs.
+#    We avoid hardcoding "/etc/ssl/cert.pem" as it varies by OS (Vercel uses Amazon Linux 2).
+#    Simply passing "ssl": {} often works to enforce SSL with system defaults.
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     pool_pre_ping=True, 
     pool_recycle=300,
     connect_args={
-        "ssl": {
-            "ssl_ca": "/etc/ssl/cert.pem" # Common path, or often just {"ssl": True} works for system CA
-        }
+        "ssl": {} # Use system default CA bundles
     }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
