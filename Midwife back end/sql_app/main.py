@@ -44,6 +44,23 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
+
+# We assume uvicorn is run from 'Midwife back end' folder
+# We assume uvicorn is run from 'Midwife back end' folder
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static", html=True), name="static")
+else:
+    # Fallback for running from within sql_app or elsewhere
+    if os.path.exists("../static"):
+        app.mount("/static", StaticFiles(directory="../static", html=True), name="static")
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 @app.get("/setup_admin")
 def setup_admin_user(db: Session = Depends(get_db)):
     # 1. Check if MOH Admin exists
@@ -65,22 +82,6 @@ def setup_admin_user(db: Session = Depends(get_db)):
         return {"status": "created", "username": created_user.username, "message": "Admin user created successfully. Login with 'admin123'."}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-
-# We assume uvicorn is run from 'Midwife back end' folder
-# We assume uvicorn is run from 'Midwife back end' folder
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static", html=True), name="static")
-else:
-    # Fallback for running from within sql_app or elsewhere
-    if os.path.exists("../static"):
-        app.mount("/static", StaticFiles(directory="../static", html=True), name="static")
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_mother = OAuth2PasswordBearer(tokenUrl="mother/token")
