@@ -63,21 +63,34 @@ def get_db():
 
 @app.get("/setup_admin")
 def setup_admin_user(db: Session = Depends(get_db)):
-    # 1. Check if MOH Admin exists
-    existing_admin = crud.get_moh_officer_by_username(db, "moh_admin")
-    if existing_admin:
-        return {"status": "exists", "message": "User 'moh_admin' already exists."}
-    
-    # 2. Create MOH Admin
-    new_admin = schemas.MOHOfficerCreate(
-        username="moh_admin",
-        password="admin123",
-        full_name="System Admin",
-        email="admin@moh.gov.lk",
-        moh_office_id=1
-    )
-    
     try:
+        # 1. Ensure MOH Office exists (Fixes Foreign Key Error)
+        existing_office = db.query(models.MOHOffice).filter(models.MOHOffice.id == 1).first()
+        if not existing_office:
+            new_office = models.MOHOffice(
+                id=1,
+                name="Head Office",
+                district="Colombo",
+                province="Western"
+            )
+            db.add(new_office)
+            db.commit()
+            db.refresh(new_office)
+
+        # 2. Check if MOH Admin exists
+        existing_admin = crud.get_moh_officer_by_username(db, "moh_admin")
+        if existing_admin:
+            return {"status": "exists", "message": "User 'moh_admin' already exists."}
+        
+        # 3. Create MOH Admin
+        new_admin = schemas.MOHOfficerCreate(
+            username="moh_admin",
+            password="admin123",
+            full_name="System Admin",
+            email="admin@moh.gov.lk",
+            moh_office_id=1
+        )
+        
         created_user = crud.create_moh_officer(db, new_admin)
         return {"status": "created", "username": created_user.username, "message": "Admin user created successfully. Login with 'admin123'."}
     except Exception as e:
