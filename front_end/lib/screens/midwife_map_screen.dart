@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 import '../models/mother.dart';
 import 'mother_health_file_screen.dart'; // To open profile
+import 'package:front_end/l10n/app_localizations.dart';
 
 class MidwifeMapScreen extends StatefulWidget {
   @override
@@ -73,7 +74,7 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Midwife Field Map"),
+        title: Text(AppLocalizations.of(context)!.midwifeMapTitle),
         backgroundColor: Colors.teal,
         actions: [
           IconButton(
@@ -82,7 +83,7 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
               setState(() => _isLoading = true);
               _loadData(); // Reload everything
             },
-            tooltip: "Refresh Map Data",
+            tooltip: AppLocalizations.of(context)!.refreshMap,
           ),
         ],
       ),
@@ -141,7 +142,9 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
                         child: TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
-                            hintText: "Search mother by name...",
+                            hintText: AppLocalizations.of(
+                              context,
+                            )!.searchMother,
                             prefixIcon: Icon(Icons.search),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
@@ -180,26 +183,31 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
                           alignment: WrapAlignment.center,
                           children: [
                             _buildFilterChip(
+                              AppLocalizations.of(context)!.todaysVisits,
                               "Today's Visits",
                               Colors.orange,
                               Icons.calendar_today,
                             ),
                             _buildFilterChip(
+                              AppLocalizations.of(context)!.highRisk,
                               "High Risk",
                               Colors.red,
                               Icons.warning_rounded,
                             ),
                             _buildFilterChip(
+                              AppLocalizations.of(context)!.lowRisk,
                               "Low Risk",
                               Colors.green,
                               Icons.location_on,
                             ),
                             _buildFilterChip(
+                              AppLocalizations.of(context)!.eligible,
                               "Eligible",
                               Colors.blue,
                               Icons.person_pin_circle,
                             ),
                             _buildFilterChip(
+                              AppLocalizations.of(context)!.postnatal,
                               "Postnatal",
                               Colors.purple,
                               Icons.child_care,
@@ -207,6 +215,34 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
                           ],
                         ),
                       ),
+
+                      // Unmapped Count Warning
+                      if (_filteredMothers.any((m) => !m.hasLocation))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              AppLocalizations.of(context)!.unmappedWarning(
+                                _filteredMothers
+                                    .where((m) => !m.hasLocation)
+                                    .length,
+                              ),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -258,8 +294,13 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
     return 'Low Risk';
   }
 
-  Widget _buildFilterChip(String label, Color color, IconData icon) {
-    final isSelected = _selectedFilters.contains(label);
+  Widget _buildFilterChip(
+    String label,
+    String filterKey,
+    Color color,
+    IconData icon,
+  ) {
+    final isSelected = _selectedFilters.contains(filterKey);
     return FilterChip(
       showCheckmark: false,
       visualDensity: VisualDensity.compact,
@@ -284,21 +325,30 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
       onSelected: (bool selected) {
         setState(() {
           if (selected) {
-            _selectedFilters.add(label);
+            _selectedFilters.add(filterKey);
           } else {
-            _selectedFilters.remove(label);
+            _selectedFilters.remove(filterKey);
           }
           _updateFilteredMothers();
         });
       },
       backgroundColor: Colors.white,
-      selectedColor: color.withOpacity(1.0),
+      selectedColor: color.withValues(alpha: 1.0),
       side: BorderSide(
-        color: isSelected ? Colors.transparent : color.withOpacity(0.5),
+        color: isSelected ? Colors.transparent : color.withValues(alpha: 0.5),
         width: 1,
       ),
       shape: StadiumBorder(),
     );
+  }
+
+  String _getTranslatedStatus(String status) {
+    var loc = AppLocalizations.of(context)!;
+    if (status == 'Eligible') return loc.eligible;
+    if (status == 'Postnatal') return loc.postnatal;
+    if (status == 'High Risk') return loc.highRisk;
+    if (status == 'Low Risk') return loc.lowRisk;
+    return status;
   }
 
   Widget _buildMarkerIcon(Mother mother) {
@@ -344,7 +394,7 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
                         ),
                       ),
                       Text(
-                        "Status: ${mother.status}",
+                        "${AppLocalizations.of(context)!.status}: ${_getTranslatedStatus(mother.status)}",
                         style: TextStyle(color: Colors.grey[700]),
                       ),
                     ],
@@ -353,16 +403,22 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
               ],
             ),
             Divider(height: 32),
-            Text("Address:", style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              "${AppLocalizations.of(context)!.address}:",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             Text(mother.address),
             SizedBox(height: 16),
-            Text("Risk Level:", style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              "${AppLocalizations.of(context)!.riskLevel}:",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: mother.riskLevel == 'High'
-                    ? Colors.red.withOpacity(0.1)
-                    : Colors.green.withOpacity(0.1),
+                    ? Colors.red.withValues(alpha: 0.1)
+                    : Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -387,7 +443,7 @@ class _MidwifeMapScreenState extends State<MidwifeMapScreen> {
                   );
                 },
                 icon: Icon(Icons.folder_open),
-                label: Text("View Health File"),
+                label: Text(AppLocalizations.of(context)!.viewHealthFile),
                 style: ElevatedButton.styleFrom(
                   padding: EdgeInsets.symmetric(vertical: 12),
                   backgroundColor: Colors.teal,

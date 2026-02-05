@@ -6,7 +6,7 @@ import '../models/pregnancy_record.dart';
 import '../models/delivery_record.dart';
 import '../models/antenatal_plan.dart';
 import '../models/appointment.dart';
-import '../models/leave_request.dart';
+
 import '../models/mother.dart';
 import '../models/message.dart';
 import '../models/alert.dart'; // NEW
@@ -118,11 +118,11 @@ class ApiService {
 
   // --- MOTHERS ---
 
-  Future<List<Mother>> getMothers({String? query}) async {
+  Future<List<Mother>> getMothers({String? query, int limit = 1000}) async {
     final headers = await _getHeaders();
-    String endpoint = "/mothers/";
+    String endpoint = "/mothers/?limit=$limit";
     if (query != null && query.isNotEmpty) {
-      endpoint += "?search=$query";
+      endpoint += "&search=$query";
     }
     String url = "$_baseUrl$endpoint";
 
@@ -150,6 +150,22 @@ class ApiService {
     }
 
     throw Exception('Failed to load mothers (Offline & No Cache)');
+  }
+
+  Future<Mother> getMother(int id) async {
+    if (_syncService.isOnline) {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/mothers/$id"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return Mother.fromJson(jsonDecode(response.body));
+      }
+    }
+    // Fallback: Check cached list? expensive but okay
+    // We don't have individual cache per ID usually, just the list 'getMothers'
+    // For now, throw if online fails
+    throw Exception('Failed to load mother $id');
   }
 
   // NEW: Get Current Mother Profile (for Mother Portal)
@@ -615,66 +631,10 @@ class ApiService {
   // ----------------------------------------------------------------------
   // LEAVE REQUESTS
   // ----------------------------------------------------------------------
-  Future<List<LeaveRequest>> getLeaveRequests() async {
-    // Alias for getMyLeaveRequests or distinct?
-    // Error said: "The method 'getLeaveRequests' isn't defined".
-    // Original code had `getLeaveRequests`.
-    // It calls `/leave-requests/me`.
-    return getMyLeaveRequests();
-  }
-
-  Future<List<LeaveRequest>> getMyLeaveRequests() async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$_baseUrl/leave-requests/me'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      List<dynamic> body = json.decode(response.body);
-      return body.map((dynamic item) => LeaveRequest.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to load leave requests');
-    }
-  }
-
-  Future<bool> createLeaveRequest(LeaveRequest request) async {
-    final headers = await _getHeaders();
-    final response = await http.post(
-      Uri.parse('$_baseUrl/leave-requests/'),
-      headers: headers,
-      body: json.encode(request.toJson()),
-    );
-    // Original returned bool. New returned LeaveRequest object?
-    // Let's return bool to match legacy.
-    return response.statusCode == 200;
-  }
-
-  // ----------------------------------------------------------------------
-  // DASHBOARD STATS & NOTIFICATIONS (NEW)
-  // ----------------------------------------------------------------------
-  Future<Map<String, int>> getDashboardStats() async {
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$_baseUrl/midwives/dashboard-stats'),
-      headers: headers,
-    );
-
-    if (response.statusCode == 200) {
-      print("DEBUG STATS RESPONSE: ${response.body}");
-      return Map<String, int>.from(json.decode(response.body));
-    } else {
-      throw Exception('Failed to load stats');
-    }
-  }
-
   Future<List<String>> getNotifications() async {
     // 1. Get Today's Visits
     final today = DateTime.now();
     final appointments = await getMidwifeAppointments(date: today);
-
-    // 2. Get Recent Leave Statuses
-    final leaves = await getMyLeaveRequests();
 
     List<String> notifications = [];
 
@@ -694,16 +654,6 @@ class ApiService {
       } else {
         notifications.add("No appointments scheduled for today.");
       }
-    }
-
-    // Add Leave Alerts (Approved/Rejected)
-    final decisionedLeaves = leaves
-        .where((l) => l.status != 'Pending')
-        .toList();
-    for (var leave in decisionedLeaves) {
-      notifications.add(
-        "Leave Request (${leave.startDate}) was ${leave.status}. Comment: ${leave.mohComment ?? 'None'}",
-      );
     }
 
     return notifications;
@@ -792,6 +742,22 @@ class ApiService {
   }
 
   // --- MIDWIFE ANALYTICS (Actionable) ---
+  Future<Map<String, int>> getDashboardStats() async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/midwives/dashboard/stats"),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return Map<String, int>.from(jsonDecode(response.body));
+      }
+      return {'todays_visits': 0};
+    } catch (e) {
+      print("Error fetching dashboard stats: $e");
+      return {'todays_visits': 0};
+    }
+  }
+
   Future<List<dynamic>> getMidwifeDefaulters() async {
     try {
       final response = await http.get(

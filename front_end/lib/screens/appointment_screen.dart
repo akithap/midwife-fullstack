@@ -5,6 +5,7 @@ import '../models/appointment.dart';
 import '../models/mother.dart';
 import '../services/api_service.dart';
 import 'anc_record_screen.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 
 class AppointmentScreen extends StatefulWidget {
   @override
@@ -44,9 +45,13 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.errorSaving(e.toString()),
+            ),
+          ),
+        );
         setState(() => _isLoading = false);
       }
     }
@@ -56,13 +61,17 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     try {
       await _apiService.updateAppointment(appt.id, {"status": "Completed"});
       _loadData(); // Refresh list
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Visit Marked as Completed!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.visitCompleted)),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.errorSaving(e.toString()),
+          ),
+        ),
+      );
     }
   }
 
@@ -86,7 +95,10 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Daily Visits', style: TextStyle(fontSize: 18)),
+            Text(
+              AppLocalizations.of(context)!.dailyVisits,
+              style: TextStyle(fontSize: 18),
+            ),
             Text(
               todayStr,
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
@@ -105,7 +117,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                   Icon(Icons.event_available, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
-                    "No visits scheduled for today!",
+                    AppLocalizations.of(context)!.noVisitsToday,
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                 ],
@@ -121,7 +133,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                   orElse: () => Mother(
                     id: -1,
                     nic: 'N/A',
-                    fullName: 'Unknown',
+                    fullName: AppLocalizations.of(context)!.unknown,
                     address: 'N/A',
                     contactNumber: 'N/A',
                     midwifeId: -1,
@@ -220,7 +232,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                         // Notes
                         if (appt.notes != null && appt.notes!.isNotEmpty) ...[
                           Text(
-                            "Notes:",
+                            AppLocalizations.of(context)!.notes,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
@@ -241,14 +253,20 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                                   onPressed: null, // Disabled
                                   icon: Icon(Icons.check, color: Colors.green),
                                   label: Text(
-                                    "COMPLETED",
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.completedStatus,
                                     style: TextStyle(color: Colors.green),
                                   ),
                                 )
                               : ElevatedButton.icon(
                                   onPressed: () => _markCompleted(appt),
                                   icon: Icon(Icons.check_circle_outline),
-                                  label: Text("MARK AS COMPLETED"),
+                                  label: Text(
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.markAsCompleted,
+                                  ),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,

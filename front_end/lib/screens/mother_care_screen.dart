@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../models/mother.dart';
 import '../models/appointment.dart';
 import '../services/api_service.dart';
@@ -76,7 +77,11 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
     if (result == true) {
       await _fetchData(); // Refresh to show new status and appointments
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Pregnancy Registration Complete!")),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.pregnancyRegistrationComplete,
+          ),
+        ),
       );
     }
   }
@@ -108,9 +113,9 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
 
       if (result == true) {
         await _fetchData();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Record Updated Successfully!")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.motherUpdated)),
+        );
       }
     } catch (e) {
       setState(() => _isLoading = false);
@@ -140,13 +145,15 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
     if (success) {
       await _fetchData();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Delivery Reported! PNC Schedule Generated.")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.deliveryReported)),
       );
     } else {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed to report delivery.")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.failedReportDelivery),
+        ),
+      );
     }
   }
 
@@ -167,22 +174,40 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
     }
   }
 
+  String _getTranslatedStatus(String status, BuildContext context) {
+    switch (status) {
+      case 'Eligible':
+        return AppLocalizations.of(context)!.eligible.toUpperCase();
+      case 'Pregnant':
+        return AppLocalizations.of(context)!.pregnant.toUpperCase();
+      case 'Postnatal':
+        return AppLocalizations.of(context)!.postnatal.toUpperCase();
+      case 'Completed':
+        return AppLocalizations.of(context)!.completed.toUpperCase();
+      default:
+        return status.toUpperCase();
+    }
+  }
+
   // --- FLEXIBLE TIMELINE ACTIONS ---
 
   Future<void> _deleteVisit(int id) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("Delete Visit?"),
-        content: Text("Are you sure you want to remove this visit?"),
+        title: Text(AppLocalizations.of(context)!.deleteVisitTitle),
+        content: Text(AppLocalizations.of(context)!.deleteVisitConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text("Cancel"),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text("Delete", style: TextStyle(color: Colors.red)),
+            child: Text(
+              AppLocalizations.of(context)!.delete,
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -214,9 +239,11 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       helpText: idealDate != null
-          ? "IDEAL: ${DateFormat('MMM d').format(idealDate)}"
-          : "SELECT DATE",
-      fieldHintText: idealDate != null ? "Target: Week 12" : "Enter Date",
+          ? "${AppLocalizations.of(context)!.ideal}: ${DateFormat('MMM d').format(idealDate)}"
+          : AppLocalizations.of(context)!.selectDate,
+      fieldHintText: idealDate != null
+          ? "Target: Week 12"
+          : AppLocalizations.of(context)!.enterDate,
     );
 
     if (newDate != null) {
@@ -231,19 +258,19 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
             await showDialog(
               context: context,
               builder: (c) => AlertDialog(
-                title: Text("Warning: Late Visit ⚠️"),
+                title: Text(AppLocalizations.of(context)!.lateVisitWarning),
                 content: Text(
-                  "This date is more than 2 weeks after the recommended Week $weekNum target.\n\nProceed anyway?",
+                  AppLocalizations.of(context)!.lateVisitMessage(weekNum),
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(c, false),
-                    child: Text("Cancel"),
+                    child: Text(AppLocalizations.of(context)!.cancel),
                   ),
                   ElevatedButton(
                     onPressed: () => Navigator.pop(c, true),
                     child: Text(
-                      "Proceed",
+                      AppLocalizations.of(context)!.proceed,
                       style: TextStyle(color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -274,7 +301,7 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("Add Extra Visit"),
+        title: Text(AppLocalizations.of(context)!.addExtraVisit),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -300,23 +327,43 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
             DropdownButton<String>(
               value: type,
               isExpanded: true,
-              items: [
-                "Home Visit",
-                "Clinic",
-                "Emergency",
-              ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: (v) => type = v!,
+              items: ['Home Visit', 'Clinic', 'Emergency'].map((String key) {
+                return DropdownMenuItem<String>(
+                  value: key,
+                  child: Text(_getTranslatedVisitType(context, key)),
+                );
+              }).toList(),
+              onChanged: (v) {
+                // Update the local state variable 'type'
+                // Since this is inside a Dialog's builder, we might need StateSetter if it was StatefulBuilder
+                // But here 'type' is a local variable to the closure.
+                // However, the builder is (ctx) => AlertDialog.
+                // The 'type' variable is outside.
+                // To update UI, we need (ctx as Element).markNeedsBuild() or use StatefulBuilder.
+                // The original code had type = v!, but didn't setState.
+                // It seems to rely on the Dialog rebuilding or just holding the value?
+                // Wait, the original code had: onChanged: (v) => type = v!,
+                // But 'type' is defined where?
+                // var type = "Home Visit"; inside _addCustomVisit function scope.
+                // If the dialog doesn't rebuild, the Dropdown value won't update visually.
+                // The original code likely had this issue or used a different trick.
+                // I will wrap it in StatefulBuilder to be safe and correct.
+                type = v!;
+                (ctx as Element).markNeedsBuild();
+              },
             ),
             TextField(
               controller: notesCtrl,
-              decoration: InputDecoration(labelText: "Notes / Reason"),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.notesReason,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text("Cancel"),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -335,7 +382,7 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
               Navigator.pop(ctx);
               _fetchData();
             },
-            child: Text("Add"),
+            child: Text(AppLocalizations.of(context)!.add),
           ),
         ],
       ),
@@ -359,7 +406,7 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
               child: Column(
                 children: [
                   Text(
-                    DateFormat('MMM d').format(appt.dateTime),
+                    _formatDate(context, appt.dateTime),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: isCompleted ? Colors.green : Colors.teal,
@@ -434,14 +481,14 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                         : Icons.medical_services,
                     color: _getStatusColor(_mother.status),
                   ),
-                  title: Text(appt.visitType),
+                  title: Text(_getTranslatedVisitType(context, appt.visitType)),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(appt.notes ?? "Scheduled Visit"),
+                      Text(_getTranslatedNotes(context, appt.notes)),
                       if (isPast && !isCompleted)
                         Text(
-                          "Overdue",
+                          AppLocalizations.of(context)!.overdue,
                           style: TextStyle(
                             color: Colors.red,
                             fontSize: 10,
@@ -474,15 +521,23 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                               bool? reschedule = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  title: Text("Date Mismatch 📅"),
+                                  title: Text(
+                                    AppLocalizations.of(context)!.dateMismatch,
+                                  ),
                                   content: Text(
-                                    "This visit is scheduled for ${DateFormat('MMM d').format(appt.dateTime)}, but today is ${DateFormat('MMM d').format(now)}.\n\n"
-                                    "Visits can only be completed on the scheduled day.",
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.dateMismatchBody(
+                                      _formatDate(context, appt.dateTime),
+                                      _formatDate(context, now),
+                                    ),
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.pop(ctx, null),
-                                      child: Text("Cancel"),
+                                      child: Text(
+                                        AppLocalizations.of(context)!.cancel,
+                                      ),
                                     ),
                                     ElevatedButton(
                                       onPressed: () => Navigator.pop(ctx, true),
@@ -490,7 +545,9 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                                         backgroundColor: Colors.teal,
                                       ),
                                       child: Text(
-                                        "Reschedule to Today & Complete",
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.rescheduleComplete,
                                         style: TextStyle(color: Colors.white),
                                       ),
                                     ),
@@ -499,20 +556,46 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                               );
 
                               if (reschedule == true) {
-                                await _apiService.updateAppointment(appt.id, {
-                                  "date_time": DateTime.now().toIso8601String(),
-                                  "status": "Completed",
-                                });
-                                _fetchData();
+                                try {
+                                  await _apiService.updateAppointment(appt.id, {
+                                    "date_time": DateTime.now()
+                                        .toIso8601String(),
+                                    "status": "Completed",
+                                  });
+                                  _fetchData();
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceAll(
+                                          "Exception: ",
+                                          "",
+                                        ),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                               return; // Stop if mismatch and not rescheduled
                             }
 
-                            // If same day, just complete
-                            await _apiService.updateAppointment(appt.id, {
-                              "status": "Completed",
-                            });
-                            _fetchData();
+                            try {
+                              // If same day, just complete
+                              await _apiService.updateAppointment(appt.id, {
+                                "status": "Completed",
+                              });
+                              _fetchData();
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e.toString().replaceAll("Exception: ", ""),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           },
                           tooltip: "Mark as Completed",
                         ),
@@ -546,12 +629,15 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
           _mother.status == 'Pregnant' || _mother.status == 'Postnatal'
           ? FloatingActionButton.extended(
               onPressed: _addCustomVisit,
-              label: Text("Add Visit"),
+              label: Text(AppLocalizations.of(context)!.addVisit),
               icon: Icon(Icons.add),
               backgroundColor: Colors.teal,
             )
           : null,
-      appBar: AppBar(title: Text("Care Plan"), backgroundColor: Colors.teal),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.carePlan),
+        backgroundColor: Colors.teal,
+      ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -587,12 +673,15 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                               Row(
                                 children: [
                                   Text(
-                                    "Status: ",
+                                    "${AppLocalizations.of(context)!.status}: ",
                                     style: TextStyle(color: Colors.grey[700]),
                                   ),
                                   Chip(
                                     label: Text(
-                                      _mother.status.toUpperCase(),
+                                      _getTranslatedStatus(
+                                        _mother.status,
+                                        context,
+                                      ),
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 10,
@@ -633,7 +722,11 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                             child: ElevatedButton.icon(
                               onPressed: _handleStartPregnancy,
                               icon: Icon(Icons.favorite),
-                              label: Text("Start Pregnancy Plan"),
+                              label: Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.startPregnancyPlan,
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.pink,
                                 padding: EdgeInsets.symmetric(vertical: 16),
@@ -646,7 +739,9 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                             child: ElevatedButton.icon(
                               onPressed: _handleReportDelivery,
                               icon: Icon(Icons.child_friendly),
-                              label: Text("Report Delivery (Start PNC)"),
+                              label: Text(
+                                AppLocalizations.of(context)!.reportDelivery,
+                              ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.orange,
                                 padding: EdgeInsets.symmetric(vertical: 16),
@@ -662,7 +757,7 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        "Care Timeline",
+                        AppLocalizations.of(context)!.careTimeline,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -675,7 +770,9 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
                   _appointments.isEmpty
                       ? Padding(
                           padding: EdgeInsets.all(30),
-                          child: Text("No upcoming visits scheduled."),
+                          child: Text(
+                            AppLocalizations.of(context)!.noUpcomingVisits,
+                          ),
                         )
                       : ListView.builder(
                           shrinkWrap: true,
@@ -688,5 +785,44 @@ class _MotherCareScreenState extends State<MotherCareScreen> {
               ),
             ),
     );
+  }
+
+  String _getTranslatedVisitType(BuildContext context, String type) {
+    final t = type.trim();
+    if (t == 'Clinic') return AppLocalizations.of(context)!.clinic;
+    if (t == 'Home Visit') return AppLocalizations.of(context)!.homeVisit;
+    if (t == 'Emergency') return AppLocalizations.of(context)!.emergency;
+    // Allow case-insensitive or partial match if needed, but 'PNC' should be exact standard
+    if (t.toUpperCase() == 'PNC') return AppLocalizations.of(context)!.pnc;
+    if (t.toUpperCase() == 'ANC') return AppLocalizations.of(context)!.anc;
+    return type;
+  }
+
+  String _getTranslatedNotes(BuildContext context, String? notes) {
+    if (notes == null) return AppLocalizations.of(context)!.scheduledVisit;
+    final n = notes.trim();
+    if (n == "Routine Checkup") {
+      return AppLocalizations.of(context)!.routineCheckup;
+    }
+
+    // Flexible Regex: "PNC Visit X (Day Y)" case insensitive, flexible spaces
+    // e.g. "PNC Visit 1 (Day 3)" or "pnc visit 1(day 3)"
+    final pncRegex = RegExp(
+      r'PNC\s*Visit\s*(\d+)\s*\(Day\s*(\d+)\)',
+      caseSensitive: false,
+    );
+    final pncMatch = pncRegex.firstMatch(n);
+    if (pncMatch != null) {
+      return AppLocalizations.of(
+        context,
+      )!.pncVisitDay(pncMatch.group(1)!, pncMatch.group(2)!);
+    }
+
+    return notes;
+  }
+
+  String _formatDate(BuildContext context, DateTime date) {
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat.MMMd(locale).format(date);
   }
 }

@@ -317,6 +317,19 @@ def read_mothers_for_midwife(
     mothers = crud.get_mothers_by_midwife(db, midwife_id=current_midwife.id, skip=skip, limit=limit, search=search)
     return mothers
 
+@app.get("/mothers/{mother_id}", response_model=schemas.Mother)
+def read_mother(
+    mother_id: int,
+    db: Session = Depends(get_db),
+    current_midwife: schemas.Midwife = Depends(get_current_midwife)
+):
+    db_mother = crud.get_mother(db, mother_id=mother_id)
+    if not db_mother:
+        raise HTTPException(status_code=404, detail="Mother not found")
+    if db_mother.midwife_id != current_midwife.id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this mother")
+    return db_mother
+
 # NEW: Update Mother Details
 @app.put("/mothers/{mother_id}", response_model=schemas.Mother)
 def update_mother_details(
@@ -584,42 +597,7 @@ def get_mother_pnc_visits(mother_id: int, db: Session = Depends(get_db)):
     return crud.get_mother_pnc_visits(db, mother_id)
 
 
-# --- LEAVE REQUEST ENDPOINTS ---
 
-@app.post("/leave-requests/", response_model=schemas.LeaveRequest)
-def create_leave_request(
-    leave: schemas.LeaveRequestCreate,
-    db: Session = Depends(get_db),
-    current_midwife: schemas.Midwife = Depends(get_current_midwife)
-):
-    leave_req = crud.create_leave_request(db, leave, current_midwife.id)
-    if leave_req is None:
-        raise HTTPException(status_code=400, detail="Duplicate or Overlapping Leave Request")
-    return leave_req
-
-@app.get("/leave-requests/me", response_model=List[schemas.LeaveRequest])
-def get_my_leave_requests(
-    db: Session = Depends(get_db),
-    current_midwife: schemas.Midwife = Depends(get_current_midwife)
-):
-    return crud.get_leave_requests_by_midwife(db, current_midwife.id)
-
-# For MOH
-@app.get("/leave-requests/", response_model=List[schemas.LeaveRequest])
-def get_all_leave_requests(
-    db: Session = Depends(get_db),
-    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
-):
-    return crud.get_all_leave_requests(db)
-
-@app.put("/leave-requests/{leave_id}", response_model=schemas.LeaveRequest)
-def update_leave_request(
-    leave_id: int,
-    update_data: schemas.LeaveRequestUpdate,
-    db: Session = Depends(get_db),
-    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
-):
-    return crud.update_leave_request(db, leave_id, update_data)
             
 # --- MOTHER PASSWORD CHANGE ---
 
@@ -1162,6 +1140,57 @@ def read_moh_stats(
     current_moh: schemas.MOHOfficer = Depends(get_current_moh)
 ):
     return crud.get_moh_reports(db, moh_office_id=current_moh.moh_office_id)
+
+# --- NEW: ADVANCED ANALYTICS ENDPOINTS ---
+
+@app.get("/moh/analytics/registration")
+def get_analytics_registration(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_registration_timing(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/delivery")
+def get_analytics_delivery(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_delivery_outcomes(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/nutrition")
+def get_analytics_nutrition(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_nutrition_newborn(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/performance")
+def get_analytics_performance(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_midwife_performance(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/hotspots")
+def get_analytics_hotspots_endpoint(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_hotspots(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/defaulters")
+def get_analytics_defaulters_endpoint(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_defaulters(db, current_moh.moh_office_id)
+
+@app.get("/moh/analytics/forecast")
+def get_analytics_forecast_endpoint(
+    db: Session = Depends(get_db),
+    current_moh: schemas.MOHOfficer = Depends(get_current_moh)
+):
+    return crud.get_analytics_forecast(db, current_moh.moh_office_id)
 
 # This tells FastAPI: "If someone goes to http://localhost:8000/static/login.html, show them that file."
 app.mount("/static", StaticFiles(directory="static"), name="static")

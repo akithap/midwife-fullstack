@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/api_service.dart';
 
 class MyAntenatalScreen extends StatefulWidget {
@@ -20,7 +21,7 @@ class _MyAntenatalScreenState extends State<MyAntenatalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Antenatal Plan'),
+        title: Text(AppLocalizations.of(context)!.myAntenatalPlan),
         backgroundColor: Colors.orange,
       ),
       body: FutureBuilder<List<dynamic>>(
@@ -29,9 +30,13 @@ class _MyAntenatalScreenState extends State<MyAntenatalScreen> {
           if (snapshot.connectionState == ConnectionState.waiting)
             return Center(child: CircularProgressIndicator());
           if (snapshot.hasError)
-            return Center(child: Text('Error loading records'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.errorLoadingMeetings),
+            );
           if (!snapshot.hasData || snapshot.data!.isEmpty)
-            return Center(child: Text('No plan found.'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noPlanFound),
+            );
 
           final plan = snapshot.data![0]; // Show the first plan
           return ListView(
@@ -40,12 +45,12 @@ class _MyAntenatalScreenState extends State<MyAntenatalScreen> {
               Card(
                 child: ListTile(
                   leading: Icon(Icons.calendar_today, color: Colors.orange),
-                  title: Text('Next Clinic Visit'),
+                  title: Text(AppLocalizations.of(context)!.nextClinicVisit),
                   // Fixed String Interpolation
                   subtitle: Text(
                     plan['next_clinic_date'] != null
                         ? plan['next_clinic_date'].split('T')[0]
-                        : 'Not Scheduled',
+                        : AppLocalizations.of(context)!.notScheduled,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -53,16 +58,25 @@ class _MyAntenatalScreenState extends State<MyAntenatalScreen> {
               SizedBox(height: 16),
 
               Text(
-                'Classes Attended',
+                AppLocalizations.of(context)!.classesAttended,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              _classCard('1st Trimester', plan['class_1st_date']),
-              _classCard('2nd Trimester', plan['class_2nd_date']),
-              _classCard('3rd Trimester', plan['class_3rd_date']),
+              _classCard(
+                AppLocalizations.of(context)!.firstTrimester,
+                plan['class_1st_date'],
+              ),
+              _classCard(
+                AppLocalizations.of(context)!.secondTrimester,
+                plan['class_2nd_date'],
+              ),
+              _classCard(
+                AppLocalizations.of(context)!.thirdTrimester,
+                plan['class_3rd_date'],
+              ),
 
               SizedBox(height: 16),
               Text(
-                'Emergency Contact',
+                AppLocalizations.of(context)!.emergencyContact,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Card(
@@ -70,10 +84,22 @@ class _MyAntenatalScreenState extends State<MyAntenatalScreen> {
                   padding: EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _row('Name', plan['emergency_contact_name']),
-                      _row('Phone', plan['emergency_contact_phone']),
-                      _row('MOH Office', plan['moh_office_phone']),
-                      _row('PHM Phone', plan['phm_phone']),
+                      _row(
+                        AppLocalizations.of(context)!.name,
+                        plan['emergency_contact_name'],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.phone,
+                        plan['emergency_contact_phone'],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.mohOffice,
+                        plan['moh_office_phone'],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.phmPhone,
+                        plan['phm_phone'],
+                      ),
                     ],
                   ),
                 ),
@@ -89,8 +115,8 @@ class _MyAntenatalScreenState extends State<MyAntenatalScreen> {
     bool attended = date != null;
     // Fixed String Interpolation syntax here
     String dateText = attended
-        ? "Date: ${date.split('T')[0]}"
-        : "Not yet attended";
+        ? "${AppLocalizations.of(context)!.date}: ${date.split('T')[0]}"
+        : AppLocalizations.of(context)!.notYetAttended;
 
     return Card(
       color: attended ? Colors.green[50] : Colors.grey[50],

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
 import '../enums/user_role.dart';
@@ -97,9 +98,9 @@ class _ChatScreenState extends State<ChatScreen> {
       _fetchMessages();
       _scrollToBottom();
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to send message')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.failedToSend)),
+      );
     }
   }
 
@@ -137,7 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 : _messages.isEmpty
                 ? Center(
                     child: Text(
-                      "Say Hello! 👋",
+                      AppLocalizations.of(context)!.sayHello,
                       style: theme.textTheme.bodyLarge,
                     ),
                   )
@@ -213,7 +214,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     controller: _controller,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: InputDecoration(
-                      hintText: "Type a message...",
+                      hintText: AppLocalizations.of(context)!.typeMessage,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,

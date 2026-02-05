@@ -279,27 +279,7 @@ class Appointment(AppointmentBase):
     class Config:
         from_attributes = True
 
-# --- NEW: Leave Request Schemas ---
-class LeaveRequestBase(BaseModel):
-    start_date: date
-    end_date: date
-    reason: str
 
-class LeaveRequestCreate(LeaveRequestBase):
-    pass
-
-class LeaveRequestUpdate(BaseModel):
-    status: str
-    moh_comment: Optional[str] = None
-
-class LeaveRequest(LeaveRequestBase):
-    id: int
-    midwife_id: int
-    status: str
-    moh_comment: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
 
 # ------------------------------
 # MOH & MIDWIFE MANAGEMENT SCHEMAS

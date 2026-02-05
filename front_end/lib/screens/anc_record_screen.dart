@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/appointment.dart';
 import '../models/mother.dart';
 import '../services/api_service.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 
 class ANCRecordScreen extends StatefulWidget {
   final Appointment appointment;
@@ -144,13 +145,17 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
       });
 
       Navigator.pop(context, true); // Return true to refresh
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("ANC Record Saved Successfully!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.ancSaved)),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error saving: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.errorSaving(e.toString()),
+          ),
+        ),
+      );
     } finally {
       setState(() => _isSaving = false);
     }
@@ -159,7 +164,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
   bool _validate() {
     if (_weightController.text.isEmpty || _bpSystolicController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill mandatory vitals (Weight, BP)")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.fillVitals)),
       );
       return false;
     }
@@ -175,6 +180,34 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
     }
   }
 
+  String _getTranslatedDropdown(String key) {
+    var loc = AppLocalizations.of(context)!;
+    switch (key) {
+      case "Absent":
+        return loc.absent;
+      case "Present":
+        return loc.present;
+      case "Cephalic":
+        return loc.cephalic;
+      case "Breech":
+        return loc.breech;
+      case "Transverse":
+        return loc.transverse;
+      case "Oblique":
+        return loc.oblique;
+      case "Normal":
+        return loc.normal;
+      case "Not Heard":
+        return loc.notHeard;
+      case "Reduced":
+        return loc.reduced;
+      case "Neg":
+        return loc.neg;
+      default:
+        return key;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Show Postnatal advice only if 3rd trimester (> 28 weeks)
@@ -182,7 +215,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("ANC Visit Record"),
+        title: Text(AppLocalizations.of(context)!.ancTitle),
         backgroundColor: Colors.teal,
         actions: [
           if (!_isEditing && !_isNewRecord)
@@ -199,7 +232,9 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildSectionTitle("Clinical Vitals"),
+                  _buildSectionTitle(
+                    AppLocalizations.of(context)!.clinicalVitals,
+                  ),
                   Card(
                     elevation: 2,
                     child: Padding(
@@ -207,7 +242,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                       child: Column(
                         children: [
                           _buildTextField(
-                            "POA (Weeks)",
+                            AppLocalizations.of(context)!.poaWeeks,
                             _poaController,
                             readOnly: !_isEditing,
                           ),
@@ -215,7 +250,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                             children: [
                               Expanded(
                                 child: _buildTextField(
-                                  "Weight (kg)",
+                                  AppLocalizations.of(context)!.weightKg,
                                   _weightController,
                                   isNumber: true,
                                   readOnly: !_isEditing,
@@ -224,7 +259,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                               SizedBox(width: 16),
                               Expanded(
                                 child: _buildTextField(
-                                  "Fundal Height (cm)",
+                                  AppLocalizations.of(context)!.fundalHeightCm,
                                   _fundalHeightController,
                                   isNumber: true,
                                   readOnly: !_isEditing,
@@ -236,7 +271,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                             children: [
                               Expanded(
                                 child: _buildTextField(
-                                  "BP Systolic",
+                                  AppLocalizations.of(context)!.bpSystolic,
                                   _bpSystolicController,
                                   isNumber: true,
                                   readOnly: !_isEditing,
@@ -245,7 +280,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                               SizedBox(width: 16),
                               Expanded(
                                 child: _buildTextField(
-                                  "BP Diastolic",
+                                  AppLocalizations.of(context)!.bpDiastolic,
                                   _bpDiastolicController,
                                   isNumber: true,
                                   readOnly: !_isEditing,
@@ -255,35 +290,35 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                           ),
                           SizedBox(height: 16),
                           _buildDropdown(
-                            "Pallor",
+                            AppLocalizations.of(context)!.pallor,
                             ["Absent", "Present"],
                             _pallor,
                             (v) => setState(() => _pallor = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Oedema",
+                            AppLocalizations.of(context)!.oedema,
                             ["Absent", "+", "++"],
                             _oedema,
                             (v) => setState(() => _oedema = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Fetal Lie",
+                            AppLocalizations.of(context)!.fetalLie,
                             ["Cephalic", "Breech", "Transverse", "Oblique"],
                             _fetalLie,
                             (v) => setState(() => _fetalLie = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Fetal Heart Sound",
+                            AppLocalizations.of(context)!.fetalHeart,
                             ["Normal", "Not Heard", "< 110", "> 160"],
                             _fetalHeartSound,
                             (v) => setState(() => _fetalHeartSound = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Fetal Movement",
+                            AppLocalizations.of(context)!.fetalMove,
                             ["+", "-", "Reduced"],
                             _fetalMovement,
                             (v) => setState(() => _fetalMovement = v!),
@@ -292,7 +327,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
 
                           Divider(),
                           Text(
-                            "Urine Test",
+                            AppLocalizations.of(context)!.urineTest,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.teal,
@@ -302,7 +337,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                             children: [
                               Expanded(
                                 child: _buildDropdown(
-                                  "Sugar",
+                                  AppLocalizations.of(context)!.urineSugar,
                                   ["Neg", "+", "++"],
                                   _urineSugar,
                                   (v) => setState(() => _urineSugar = v!),
@@ -312,7 +347,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                               SizedBox(width: 16),
                               Expanded(
                                 child: _buildDropdown(
-                                  "Albumin",
+                                  AppLocalizations.of(context)!.urineAlbumin,
                                   ["Neg", "+", "++"],
                                   _urineAlbumin,
                                   (v) => setState(() => _urineAlbumin = v!),
@@ -327,43 +362,45 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                   ),
 
                   SizedBox(height: 24),
-                  _buildSectionTitle("Health Education & Counsel"),
+                  _buildSectionTitle(
+                    AppLocalizations.of(context)!.healthEducation,
+                  ),
                   Card(
                     elevation: 2,
                     child: Column(
                       children: [
                         _buildCheckbox(
-                          "Given Iron/Calcium/Vitamins?",
+                          AppLocalizations.of(context)!.counselIron,
                           _nutrientSupplements,
                           (v) => setState(() => _nutrientSupplements = v!),
                         ),
                         _buildCheckbox(
-                          "Nutrition Advised",
+                          AppLocalizations.of(context)!.counselNutri,
                           _counselNutrition,
                           (v) => setState(() => _counselNutrition = v!),
                         ),
                         _buildCheckbox(
-                          "Danger Signs Explained",
+                          AppLocalizations.of(context)!.counselDanger,
                           _counselDangerSigns,
                           (v) => setState(() => _counselDangerSigns = v!),
                         ),
                         _buildCheckbox(
-                          "Family Planning Discussed",
+                          AppLocalizations.of(context)!.counselFamily,
                           _counselFamilyPlanning,
                           (v) => setState(() => _counselFamilyPlanning = v!),
                         ),
                         _buildCheckbox(
-                          "Breastfeeding Advised",
+                          AppLocalizations.of(context)!.counselBreast,
                           _counselBreastfeeding,
                           (v) => setState(() => _counselBreastfeeding = v!),
                         ),
                         _buildCheckbox(
-                          "Delivery Plan Discussed",
+                          AppLocalizations.of(context)!.counselDeliv,
                           _counselDeliveryPlan,
                           (v) => setState(() => _counselDeliveryPlan = v!),
                         ),
                         _buildCheckbox(
-                          "Emergency Prep Discussed",
+                          AppLocalizations.of(context)!.counselEmerg,
                           _counselEmergencyPrep,
                           (v) => setState(() => _counselEmergencyPrep = v!),
                         ),
@@ -371,7 +408,7 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                           Container(
                             color: Colors.orange.shade50,
                             child: _buildCheckbox(
-                              "Postnatal Care Advised (Last Trimester)",
+                              AppLocalizations.of(context)!.counselPost,
                               _counselPostnatalCare,
                               (v) => setState(() => _counselPostnatalCare = v!),
                             ),
@@ -384,7 +421,11 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
                   if (_isEditing)
                     ElevatedButton.icon(
                       icon: Icon(Icons.save),
-                      label: Text(_isSaving ? "Saving..." : "Save Record"),
+                      label: Text(
+                        _isSaving
+                            ? AppLocalizations.of(context)!.saving
+                            : AppLocalizations.of(context)!.saveRecord,
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
@@ -455,7 +496,12 @@ class _ANCRecordScreenState extends State<ANCRecordScreen> {
             isDense: true,
             onChanged: enabled ? onChanged : null,
             items: items
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_getTranslatedDropdown(e)),
+                  ),
+                )
                 .toList(),
           ),
         ),

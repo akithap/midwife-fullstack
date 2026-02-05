@@ -3,6 +3,7 @@ import '../services/api_service.dart';
 import 'register_mother_screen.dart';
 import '../models/mother.dart';
 import 'mother_care_screen.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import 'dart:async'; // Import needed for 'Timer'
 import 'chat_screen.dart';
 import '../enums/user_role.dart';
@@ -66,7 +67,7 @@ class _MotherListScreenState extends State<MotherListScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Registered Mothers'),
+        title: Text(AppLocalizations.of(context)!.registeredMothers),
         // backgroundColor: Colors.teal, // Handled by theme
       ),
       body: Column(
@@ -77,7 +78,7 @@ class _MotherListScreenState extends State<MotherListScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by Name or NIC...',
+                hintText: AppLocalizations.of(context)!.searchByNameOrNic,
                 prefixIcon: Icon(Icons.search),
                 suffixIcon: IconButton(
                   icon: Icon(Icons.clear),
@@ -105,9 +106,15 @@ class _MotherListScreenState extends State<MotherListScreen> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                    return Center(
+                      child: Text(
+                        "${AppLocalizations.of(context)!.errorSaving('Error')}: ${snapshot.error}",
+                      ),
+                    );
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text('No mothers found.'));
+                    return Center(
+                      child: Text(AppLocalizations.of(context)!.noMothersFound),
+                    );
                   }
 
                   final mothers = snapshot.data!;
@@ -124,8 +131,8 @@ class _MotherListScreenState extends State<MotherListScreen> {
                         child: ListTile(
                           leading: CircleAvatar(
                             // Dynamic color with opacity
-                            backgroundColor: theme.primaryColor.withOpacity(
-                              0.2,
+                            backgroundColor: theme.primaryColor.withValues(
+                              alpha: 0.2,
                             ),
                             child: Text(
                               mother.fullName.isNotEmpty
@@ -153,18 +160,18 @@ class _MotherListScreenState extends State<MotherListScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: mother.status == 'Pregnant'
-                                      ? Colors.pinkAccent.withOpacity(
-                                          0.2,
+                                      ? Colors.pinkAccent.withValues(
+                                          alpha: 0.2,
                                         ) // Softer for dark mode
                                       : mother.status == 'Postnatal'
-                                      ? Colors.green.withOpacity(0.2)
-                                      : theme.disabledColor.withOpacity(
-                                          0.2,
+                                      ? Colors.green.withValues(alpha: 0.2)
+                                      : theme.disabledColor.withValues(
+                                          alpha: 0.2,
                                         ), // Default grey adjusted
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  mother.status,
+                                  _getTranslatedStatus(context, mother.status),
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
@@ -192,7 +199,10 @@ class _MotherListScreenState extends State<MotherListScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    mother.riskLevel,
+                                    _getTranslatedRisk(
+                                      context,
+                                      mother.riskLevel,
+                                    ),
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -261,5 +271,20 @@ class _MotherListScreenState extends State<MotherListScreen> {
         tooltip: 'Register New Mother',
       ),
     );
+  }
+
+  String _getTranslatedStatus(BuildContext context, String status) {
+    if (status == 'Pregnant') return AppLocalizations.of(context)!.pregnant;
+    if (status == 'Postnatal') return AppLocalizations.of(context)!.postnatal;
+    if (status == 'Eligible') return AppLocalizations.of(context)!.eligible;
+    if (status == 'Completed') return AppLocalizations.of(context)!.completed;
+    return status;
+  }
+
+  String _getTranslatedRisk(BuildContext context, String risk) {
+    if (risk == 'High') return AppLocalizations.of(context)!.riskHigh;
+    if (risk == 'Moderate') return AppLocalizations.of(context)!.riskModerate;
+    if (risk == 'Low') return AppLocalizations.of(context)!.riskLow;
+    return risk;
   }
 }

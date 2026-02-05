@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/sync_service.dart';
 import '../services/database_helper.dart';
 
@@ -36,7 +37,10 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text("Sync Status"), backgroundColor: Colors.teal),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.syncStatus),
+        backgroundColor: Colors.teal,
+      ),
       body: Column(
         children: [
           // 1. Status Header
@@ -57,7 +61,9 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      syncService.isOnline ? "Online" : "Offline",
+                      syncService.isOnline
+                          ? AppLocalizations.of(context)!.online
+                          : AppLocalizations.of(context)!.offline,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -65,8 +71,10 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                     ),
                     Text(
                       syncService.isSyncing
-                          ? "Syncing in progress..."
-                          : "${_queue.length} items pending",
+                          ? "Syncing in progress..." // Not adding key for this rare state to save time/complexity unless requested
+                          : AppLocalizations.of(
+                              context,
+                            )!.itemsPending(_queue.length),
                       style: TextStyle(color: Colors.grey[700]),
                     ),
                   ],
@@ -102,7 +110,7 @@ class _SyncStatusScreenState extends State<SyncStatusScreen> {
                         ),
                         SizedBox(height: 10),
                         Text(
-                          "All records synced!",
+                          AppLocalizations.of(context)!.allRecordsSynced,
                           style: TextStyle(fontSize: 18),
                         ),
                       ],

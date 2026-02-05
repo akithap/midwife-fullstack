@@ -11,7 +11,15 @@ import 'services/sync_service.dart';
 
 import 'providers/theme_provider.dart';
 
-void main() {
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:front_end/l10n/app_localizations.dart';
+import 'providers/language_provider.dart';
+
+import 'package:intl/date_symbol_data_local.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting(); // Initialize for all locales
   runApp(MyApp());
 }
 
@@ -23,14 +31,27 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SyncService()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
+      child: Consumer2<ThemeProvider, LanguageProvider>(
+        builder: (context, themeProvider, languageProvider, child) {
           return MaterialApp(
             title: 'Midwife App',
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: AppTheme.getLight(languageProvider.currentLocale),
+            darkTheme: AppTheme.getDark(languageProvider.currentLocale),
             themeMode: themeProvider.themeMode,
+            locale: languageProvider.currentLocale,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [
+              Locale('en'), // English
+              Locale('si'), // Sinhala
+              Locale('ta'), // Tamil
+            ],
             home: AuthWrapper(),
             debugShowCheckedModeBanner: false,
           );

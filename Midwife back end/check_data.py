@@ -1,31 +1,37 @@
-from sqlalchemy import text
-from sql_app.database import engine
+from sql_app.database import SessionLocal
+from sql_app import models
 
-def check_data():
+def check_data_link():
+    db = SessionLocal()
     try:
-        with engine.connect() as connection:
-            print("--- Database Counts ---")
+        # 1. Check MOH Admin Office
+        admin = db.query(models.MOHOfficer).filter(models.MOHOfficer.username == "moh_admin").first()
+        if admin:
+            print(f"MOH Admin: {admin.username}, Office ID: {admin.moh_office_id}")
+        else:
+            print("MOH Admin not found!")
+
+        # 2. Check Midwives
+        midwives = db.query(models.Midwife).all()
+        print(f"\nTotal Midwives: {len(midwives)}")
+        for m in midwives:
+            print(f"Midwife: {m.username}, Office ID: {m.moh_office_id}")
             
-            # Midwives
-            midwives = connection.execute(text("SELECT id, username FROM midwives")).fetchall()
-            print("\n-- MIDWIVES --")
-            for m in midwives:
-                print(f"ID: {m[0]}, Username: {m[1]}")
+        # 3. Check Records
+        mothers = db.query(models.Mother).all()
+        print(f"\nTotal Mothers: {len(mothers)}")
+        
+        # 4. Check Analytics Query Logic Manually
+        if admin:
+             count = db.query(models.PregnancyRecord)\
+                .join(models.Mother)\
+                .join(models.Midwife)\
+                .filter(models.Midwife.moh_office_id == admin.moh_office_id)\
+                .count()
+             print(f"\nManual Query Count for Office {admin.moh_office_id}: {count}")
 
-            # Mothers
-            mothers = connection.execute(text("SELECT id, full_name, midwife_id, latitude, longitude, status, risk_level FROM mothers")).fetchall()
-            print("\n-- MOTHERS --")
-            for m in mothers:
-                print(f"ID: {m[0]}, Name: {m[1]}, AssignedTo: {m[2]}, Lat: {m[3]}, Lng: {m[4]}, Status: {m[5]}, RiskContext: {m[6]}")
-                
-            # Count Check
-            if midwives:
-                mw_id = midwives[0][0]
-                count = connection.execute(text(f"SELECT COUNT(*) FROM mothers WHERE midwife_id = {mw_id}")).scalar()
-                print(f"\nExpected Count for Midwife {mw_id}: {count}")
-
-    except Exception as e:
-        print(f"Error connecting to DB: {e}")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
-    check_data()
+    check_data_link()

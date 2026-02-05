@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/api_service.dart';
 import '../models/appointment.dart';
 
@@ -26,7 +27,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('Upcoming Meetings'),
+        title: Text(AppLocalizations.of(context)!.upcomingMeetings),
         // backgroundColor: Colors.blueAccent, // Handled by Theme
         elevation: 0,
       ),
@@ -38,7 +39,9 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error loading meetings'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.errorLoadingMeetings),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -53,7 +56,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'No upcoming meetings scheduled.',
+                    AppLocalizations.of(context)!.noUpcomingMeetings,
                     style: TextStyle(fontSize: 16, color: theme.disabledColor),
                   ),
                 ],
@@ -78,7 +81,7 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'No scheduled meetings found.',
+                    AppLocalizations.of(context)!.noScheduledMeetings,
                     style: TextStyle(fontSize: 16, color: theme.disabledColor),
                   ),
                 ],
@@ -113,7 +116,10 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                         child: Column(
                           children: [
                             Text(
-                              DateFormat('MMM').format(meeting.dateTime),
+                              DateFormat(
+                                'MMM',
+                                Localizations.localeOf(context).toString(),
+                              ).format(meeting.dateTime),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: isDark
@@ -122,7 +128,10 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                               ),
                             ),
                             Text(
-                              DateFormat('dd').format(meeting.dateTime),
+                              DateFormat(
+                                'dd',
+                                Localizations.localeOf(context).toString(),
+                              ).format(meeting.dateTime),
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -138,7 +147,11 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              meeting.visitType,
+                              meeting.visitType == 'Home Visit'
+                                  ? AppLocalizations.of(context)!.homeVisit
+                                  : (meeting.visitType == 'Clinic'
+                                        ? AppLocalizations.of(context)!.clinic
+                                        : meeting.visitType),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -147,7 +160,10 @@ class _UpcomingMeetingsScreenState extends State<UpcomingMeetingsScreen> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              DateFormat('hh:mm a').format(meeting.dateTime),
+                              DateFormat(
+                                'hh:mm a',
+                                Localizations.localeOf(context).toString(),
+                              ).format(meeting.dateTime),
                               style: TextStyle(
                                 fontSize: 14,
                                 color: theme.textTheme.bodyMedium?.color,

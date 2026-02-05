@@ -29,7 +29,7 @@ class Midwife(Base):
     
     mothers = relationship("Mother", back_populates="owner")
     appointments = relationship("Appointment", back_populates="midwife")
-    leave_requests = relationship("LeaveRequest", back_populates="midwife")
+
     office = relationship("MOHOffice", back_populates="midwives")
 
 class Mother(Base):
@@ -368,21 +368,7 @@ class Appointment(Base):
     anc_visit = relationship("ANCVisit", uselist=False, back_populates="appointment")
     pnc_visit = relationship("PNCVisit", uselist=False, back_populates="appointment")
 
-# --- NEW: Leave Request Model ---
-class LeaveRequest(Base):
-    __tablename__ = "leave_requests"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    midwife_id = Column(Integer, ForeignKey("midwives.id"), nullable=False)
-    
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
-    reason = Column(TEXT)
-    
-    status = Column(String(50), default="Pending") # Pending, Approved, Rejected
-    moh_comment = Column(TEXT)
-    
-    midwife = relationship("Midwife", back_populates="leave_requests")
+
 
 # --- NEW: Message Model (Chat) ---
 class Message(Base):
@@ -422,5 +408,23 @@ class Alert(Base):
     
     mother = relationship("Mother", back_populates="alerts")
 
-# Update Mother relationship
+    mother = relationship("Mother", back_populates="alerts")
+
+# --- NEW: Leave Request Model (for MOH Dashboard) ---
+class LeaveRequest(Base):
+    __tablename__ = "leave_requests"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    midwife_id = Column(Integer, ForeignKey("midwives.id"), nullable=False)
+    
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    reason = Column(TEXT)
+    status = Column(String(50), default="Pending") # Pending, Approved, Rejected
+    created_at = Column(DateTime, default=datetime.now)
+    
+    midwife = relationship("Midwife", back_populates="leave_requests")
+
+# Update Relationships
 Mother.alerts = relationship("Alert", back_populates="mother")
+Midwife.leave_requests = relationship("LeaveRequest", back_populates="midwife")

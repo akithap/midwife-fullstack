@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/appointment.dart';
 import '../models/mother.dart';
 import '../services/api_service.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 
 class PNCRecordScreen extends StatefulWidget {
   final Appointment appointment;
@@ -123,13 +124,17 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
       });
 
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("PNC Record Saved Successfully!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.pncSaved)),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error saving: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.errorSaving(e.toString()),
+          ),
+        ),
+      );
     } finally {
       setState(() => _isSaving = false);
     }
@@ -139,7 +144,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("PNC Visit Record"),
+        title: Text(AppLocalizations.of(context)!.pncTitle),
         backgroundColor: Colors.purple.shade300,
         actions: [
           if (!_isEditing && !_isNewRecord)
@@ -158,7 +163,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                 children: [
                   // --- Mother Section ---
                   _buildSectionHeader(
-                    "Mother's Condition",
+                    AppLocalizations.of(context)!.motherCondition,
                     Icons.pregnant_woman,
                   ),
                   Card(
@@ -168,20 +173,20 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                       child: Column(
                         children: [
                           _buildTextField(
-                            "Temperature (°C)",
+                            AppLocalizations.of(context)!.temperature,
                             _temperatureController,
                             isNumber: true,
                             readOnly: !_isEditing,
                           ),
                           _buildDropdown(
-                            "Pallor",
+                            AppLocalizations.of(context)!.pallor,
                             ["Absent", "Present", "Clinically Anemic"],
                             _pallor,
                             (v) => setState(() => _pallor = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Breast Condition",
+                            AppLocalizations.of(context)!.breastCondition,
                             ["Normal", "Cracked", "Engorged", "Infected"],
                             _breastCondition,
                             (v) => setState(() => _breastCondition = v!),
@@ -190,7 +195,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
 
                           Divider(),
                           _buildDropdown(
-                            "Uterus Involution",
+                            AppLocalizations.of(context)!.uterusInvolution,
                             [
                               "Contracted",
                               "Boggy",
@@ -202,14 +207,14 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Lochia Character",
+                            AppLocalizations.of(context)!.lochiaCharacter,
                             ["Red", "Pink", "White", "Excessive"],
                             _lochiaCharacter,
                             (v) => setState(() => _lochiaCharacter = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Lochia Smell",
+                            AppLocalizations.of(context)!.lochiaSmell,
                             ["Normal", "Foul"],
                             _lochiaSmell,
                             (v) => setState(() => _lochiaSmell = v!),
@@ -218,7 +223,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
 
                           Divider(),
                           _buildDropdown(
-                            "Perineum Infection (Gaping)?",
+                            AppLocalizations.of(context)!.perineumInfection,
                             ["No", "Yes"],
                             _perineumInfection ? "Yes" : "No",
                             (v) => setState(
@@ -227,7 +232,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "C-Section/Episiotomy Infection?",
+                            AppLocalizations.of(context)!.fissureInfection,
                             ["No", "Yes"],
                             _fissureInfection ? "Yes" : "No",
                             (v) => setState(
@@ -236,7 +241,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Vitamin A Mega Dose Given?",
+                            AppLocalizations.of(context)!.vitaminA,
                             ["No", "Yes"],
                             _vitaminAGiven ? "Yes" : "No",
                             (v) =>
@@ -245,7 +250,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                           ),
                           SizedBox(height: 8),
                           _buildDropdown(
-                            "Family Planning Method",
+                            AppLocalizations.of(context)!.familyPlanning,
                             [
                               "None",
                               "Pill",
@@ -260,7 +265,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                           ),
                           // Referral Alert
                           _buildDropdown(
-                            "Refer to Hospital?",
+                            AppLocalizations.of(context)!.referHospital,
                             ["No", "Yes"],
                             _referredToHospital ? "Yes" : "No",
                             (v) => setState(
@@ -276,7 +281,10 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                   SizedBox(height: 24),
 
                   // --- Baby Section ---
-                  _buildSectionHeader("Baby's Condition", Icons.child_care),
+                  _buildSectionHeader(
+                    AppLocalizations.of(context)!.babyCondition,
+                    Icons.child_care,
+                  ),
                   Card(
                     elevation: 2,
                     child: Padding(
@@ -284,20 +292,20 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                       child: Column(
                         children: [
                           _buildTextField(
-                            "Baby Weight (kg)",
+                            AppLocalizations.of(context)!.babyWeight,
                             _babyWeightController,
                             isNumber: true,
                             readOnly: !_isEditing,
                           ),
                           _buildDropdown(
-                            "Color",
+                            AppLocalizations.of(context)!.babyColor,
                             ["Pink", "Pale", "Icteric (Yellow)", "Blue"],
                             _babyColor,
                             (v) => setState(() => _babyColor = v!),
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Cord Status",
+                            AppLocalizations.of(context)!.cordStatus,
                             ["Normal", "Bleeding", "Infected/Pus", "Off"],
                             _cordStatus,
                             (v) => setState(() => _cordStatus = v!),
@@ -305,7 +313,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                           ),
 
                           _buildDropdown(
-                            "Breastfeeding",
+                            AppLocalizations.of(context)!.breastfeeding,
                             [
                               "Good Sucking",
                               "Poor Sucking",
@@ -316,7 +324,7 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                             enabled: _isEditing,
                           ),
                           _buildDropdown(
-                            "Stool Passage",
+                            AppLocalizations.of(context)!.stoolPassage,
                             ["Passed", "Not Passed", "Delayed"],
                             _babyStool,
                             (v) => setState(() => _babyStool = v!),
@@ -331,7 +339,11 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
                   if (_isEditing)
                     ElevatedButton.icon(
                       icon: Icon(Icons.save),
-                      label: Text(_isSaving ? "Saving..." : "Save PNC Record"),
+                      label: Text(
+                        _isSaving
+                            ? AppLocalizations.of(context)!.saving
+                            : AppLocalizations.of(context)!.saveRecord,
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.purple,
                         foregroundColor: Colors.white,
@@ -344,6 +356,86 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
               ),
             ),
     );
+  }
+
+  String _getTranslatedDropdown(String key) {
+    var loc = AppLocalizations.of(context)!;
+    switch (key) {
+      case "Absent":
+        return loc.absent;
+      case "Present":
+        return loc.present;
+      case "Clinically Anemic":
+        return loc.clinicallyAnemic;
+      case "Normal":
+        return loc.normal;
+      case "Cracked":
+        return loc.cracked;
+      case "Engorged":
+        return loc.engorged;
+      case "Infected":
+        return loc.infected;
+      case "Contracted":
+        return loc.contracted;
+      case "Boggy":
+        return loc.boggy;
+      case "Sub-involution":
+        return loc.subInvolution;
+      case "Measurable":
+        return loc.measurable;
+      case "Red":
+        return loc.red;
+      case "Pink":
+        return loc.pink;
+      case "White":
+        return loc.white;
+      case "Excessive":
+        return loc.excessive;
+      case "Foul":
+        return loc.foul;
+      case "No":
+        return loc.no;
+      case "Yes":
+        return loc.yes;
+      case "None":
+        return loc.none;
+      case "Pill":
+        return loc.pill;
+      case "Implant":
+        return loc.implant;
+      case "LRT":
+        return loc.lrt;
+      case "Injection":
+        return loc.injection;
+      case "Condom":
+        return loc.condom;
+      case "Pale":
+        return loc.pale;
+      case "Icteric (Yellow)":
+        return loc.icteric;
+      case "Blue":
+        return loc.blue;
+      case "Bleeding":
+        return loc.bleeding;
+      case "Infected/Pus":
+        return loc.pus;
+      case "Off":
+        return loc.off;
+      case "Good Sucking":
+        return loc.goodSucking;
+      case "Poor Sucking":
+        return loc.poorSucking;
+      case "Not Establishing":
+        return loc.notEstablishing;
+      case "Passed":
+        return loc.passed;
+      case "Not Passed":
+        return loc.notPassed;
+      case "Delayed":
+        return loc.delayed;
+      default:
+        return key;
+    }
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
@@ -408,7 +500,12 @@ class _PNCRecordScreenState extends State<PNCRecordScreen> {
             isDense: true,
             onChanged: enabled ? onChanged : null,
             items: items
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e,
+                    child: Text(_getTranslatedDropdown(e)),
+                  ),
+                )
                 .toList(),
           ),
         ),

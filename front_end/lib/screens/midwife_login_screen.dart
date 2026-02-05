@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 
 class MidwifeLoginScreen extends StatefulWidget {
@@ -33,7 +34,7 @@ class _MidwifeLoginScreenState extends State<MidwifeLoginScreen> {
       if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login Failed. Please check your credentials.'),
+            content: Text(AppLocalizations.of(context)!.loginFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -48,7 +49,7 @@ class _MidwifeLoginScreenState extends State<MidwifeLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Midwife Portal Login'),
+        title: Text(AppLocalizations.of(context)!.midwifePortalLogin),
         backgroundColor: Colors.teal,
       ),
       body: Padding(
@@ -59,7 +60,7 @@ class _MidwifeLoginScreenState extends State<MidwifeLoginScreen> {
             TextField(
               controller: _usernameController,
               decoration: InputDecoration(
-                labelText: 'Username',
+                labelText: AppLocalizations.of(context)!.username,
                 prefixIcon: Icon(Icons.person_outline),
               ),
             ),
@@ -67,7 +68,7 @@ class _MidwifeLoginScreenState extends State<MidwifeLoginScreen> {
             TextField(
               controller: _passwordController,
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: AppLocalizations.of(context)!.password,
                 prefixIcon: Icon(Icons.lock_outline),
               ),
               obscureText: true,
@@ -77,7 +78,7 @@ class _MidwifeLoginScreenState extends State<MidwifeLoginScreen> {
                 ? CircularProgressIndicator()
                 : ElevatedButton(
                     onPressed: () => _login(context),
-                    child: Text('Login as Midwife'),
+                    child: Text(AppLocalizations.of(context)!.loginAsMidwife),
                   ),
           ],
         ),

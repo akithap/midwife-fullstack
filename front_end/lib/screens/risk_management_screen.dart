@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../widgets/custom_card.dart';
 import '../models/alert.dart'; // NEW
 import 'select_mother_screen.dart'; // For full mother details potentially
+import 'package:front_end/l10n/app_localizations.dart';
 
 class RiskManagementScreen extends StatefulWidget {
   @override
@@ -60,6 +61,30 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
     }
   }
 
+  String _getTranslatedFilter(String key) {
+    var loc = AppLocalizations.of(context)!;
+    switch (key) {
+      case 'high_risk':
+        return loc.allHighRisk;
+      case 'diabetes':
+        return loc.diabetes;
+      case 'cardiac':
+        return loc.riskHeart;
+      case 'age':
+        return loc.riskAge;
+      case 'pph':
+        return loc.riskHistoryPPH;
+      case 'gravidity':
+        return loc.risk5thPreg;
+      case 'malaria':
+        return loc.riskMalaria;
+      case 'renal':
+        return loc.riskRenal;
+      default:
+        return key;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -67,7 +92,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.background,
         appBar: AppBar(
-          title: Text("Risk Management"),
+          title: Text(AppLocalizations.of(context)!.riskManagement),
           backgroundColor: Colors.teal, // CHANGED: Softer/Standard Theme Color
           foregroundColor: Colors.white,
           bottom: TabBar(
@@ -77,9 +102,12 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
             tabs: [
               Tab(
                 icon: Icon(Icons.priority_high),
-                text: "Priority Actions", // RENAMED
+                text: AppLocalizations.of(context)!.priorityActions, // RENAMED
               ),
-              Tab(icon: Icon(Icons.people_alt), text: "Risk Groups"),
+              Tab(
+                icon: Icon(Icons.people_alt),
+                text: AppLocalizations.of(context)!.riskGroups,
+              ),
             ],
           ),
         ),
@@ -103,8 +131,8 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
           ),
           child: Row(
             children: [
-              _buildToggleButton("Sensitive", 0),
-              _buildToggleButton("Forecast", 1),
+              _buildToggleButton(AppLocalizations.of(context)!.sensitive, 0),
+              _buildToggleButton(AppLocalizations.of(context)!.forecast, 1),
             ],
           ),
         ),
@@ -159,7 +187,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
-            "Silent Risk Detector (>30 Days Overdue)",
+            AppLocalizations.of(context)!.silentRiskDetector,
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
         ),
@@ -171,7 +199,9 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
               if (snapshot.connectionState == ConnectionState.waiting)
                 return Center(child: CircularProgressIndicator());
               if (!snapshot.hasData || snapshot.data!.isEmpty)
-                return _buildEmptyState("No defaulters found!");
+                return _buildEmptyState(
+                  AppLocalizations.of(context)!.noDefaulters,
+                );
 
               return ListView.builder(
                 padding: EdgeInsets.all(16),
@@ -192,11 +222,14 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
                         child: Icon(Icons.warning, color: Colors.red),
                       ),
                       title: Text(
-                        d['name'] ?? 'Unknown',
+                        d['name'] ?? AppLocalizations.of(context)!.unknown,
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        "Overdue: ${d['days_overdue']} Days\nLast Seen: ${d['last_seen']}",
+                        AppLocalizations.of(context)!.overdueDays(
+                          d['days_overdue'].toString(),
+                          d['last_seen'].toString(),
+                        ),
                       ),
                       trailing: IconButton(
                         icon: CircleAvatar(
@@ -227,7 +260,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
-            "Upcoming Deliveries (Next 30 Days)",
+            AppLocalizations.of(context)!.upcomingDeliveries,
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
         ),
@@ -239,7 +272,9 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
               if (snapshot.connectionState == ConnectionState.waiting)
                 return Center(child: CircularProgressIndicator());
               if (!snapshot.hasData || snapshot.data!.isEmpty)
-                return _buildEmptyState("No upcoming deliveries.");
+                return _buildEmptyState(
+                  AppLocalizations.of(context)!.noDeliveries,
+                );
 
               return ListView.builder(
                 padding: EdgeInsets.all(16),
@@ -260,11 +295,13 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
                         child: Icon(Icons.calendar_month, color: Colors.blue),
                       ),
                       title: Text(
-                        d['name'] ?? 'Unknown',
+                        d['name'] ?? AppLocalizations.of(context)!.unknown,
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        "EDD: ${d['edd'].toString().split(' ')[0]}\nRisk: High",
+                        AppLocalizations.of(
+                          context,
+                        )!.eddHighRisk(d['edd'].toString().split(' ')[0]),
                       ), // Placeholder Risk
                       trailing: Icon(
                         Icons.arrow_forward_ios,
@@ -310,7 +347,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
             _buildSummaryHeader(),
             SizedBox(height: 24),
             Text(
-              "Filter by Risk Factor",
+              AppLocalizations.of(context)!.filterByRisk,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             SizedBox(height: 12),
@@ -330,7 +367,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
       children: [
         Expanded(
           child: _buildStatCard(
-            "High Risk Cases",
+            AppLocalizations.of(context)!.highRiskCases,
             "${_stats['total_high_risk'] ?? 0}",
             Colors.red,
             Icons.warning_amber_rounded,
@@ -339,7 +376,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
         SizedBox(width: 16),
         Expanded(
           child: _buildStatCard(
-            "Diabetes Watch",
+            AppLocalizations.of(context)!.diabetesWatch,
             "${_stats['diabetes'] ?? 0}",
             Colors.orange,
             Icons.bloodtype,
@@ -362,12 +399,12 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: Offset(0, 4),
           ),
         ],
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +444,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
       children: filters.entries.map((entry) {
         final isSelected = _selectedFilter == entry.key;
         return ChoiceChip(
-          label: Text(entry.value),
+          label: Text(_getTranslatedFilter(entry.key)),
           selected: isSelected,
           onSelected: (val) {
             if (val) _onFilterChanged(entry.key);
@@ -427,7 +464,7 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
-          child: Text("No mothers found for this risk category."),
+          child: Text(AppLocalizations.of(context)!.noMothersFound),
         ),
       );
     }
@@ -461,14 +498,14 @@ class _RiskManagementScreenState extends State<RiskManagementScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        m['full_name'] ?? 'Unknown',
+                        m['full_name'] ?? AppLocalizations.of(context)!.unknown,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                        "Age: ${m['age'] ?? 'N/A'} • POA: ${m['poa'] ?? 'N/A'}",
+                        "${AppLocalizations.of(context)!.age}: ${m['age'] ?? 'N/A'} • ${AppLocalizations.of(context)!.poa}: ${m['poa'] ?? 'N/A'}",
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                       SizedBox(height: 8),

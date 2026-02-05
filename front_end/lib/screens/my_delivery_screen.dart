@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/api_service.dart';
 
 class MyDeliveryScreen extends StatefulWidget {
@@ -24,7 +25,7 @@ class _MyDeliveryScreenState extends State<MyDeliveryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Delivery Records'),
+        title: Text(AppLocalizations.of(context)!.myDeliveryRecords),
         backgroundColor: Colors.purple,
       ),
       body: FutureBuilder<List<dynamic>>(
@@ -33,9 +34,13 @@ class _MyDeliveryScreenState extends State<MyDeliveryScreen> {
           if (snapshot.connectionState == ConnectionState.waiting)
             return Center(child: CircularProgressIndicator());
           if (snapshot.hasError)
-            return Center(child: Text('Error loading records'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.errorLoadingMeetings),
+            );
           if (!snapshot.hasData || snapshot.data!.isEmpty)
-            return Center(child: Text('No records found.'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noRecordsFound),
+            );
 
           final records = snapshot.data!;
           return ListView.builder(
@@ -52,7 +57,7 @@ class _MyDeliveryScreenState extends State<MyDeliveryScreen> {
                     children: [
                       // FIXED: Removed backslashes from string interpolation
                       Text(
-                        'Delivery #${r['id']}',
+                        '${AppLocalizations.of(context)!.deliveryNumber}${r['id']}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -60,16 +65,31 @@ class _MyDeliveryScreenState extends State<MyDeliveryScreen> {
                         ),
                       ),
                       Divider(),
-                      _row('Date', r['delivery_date']?.split('T')[0]),
-                      _row('Mode', r['delivery_mode']),
-                      // FIXED: Removed backslashes from string interpolation
-                      _row('Birth Weight', '${r['birth_weight']} kg'),
-                      _row('Abnormalities', r['abnormalities']),
                       _row(
-                        'Discharge Date',
+                        AppLocalizations.of(context)!.date,
+                        r['delivery_date']?.split('T')[0],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.deliveryMode,
+                        r['delivery_mode'],
+                      ),
+                      // FIXED: Removed backslashes from string interpolation
+                      _row(
+                        AppLocalizations.of(context)!.birthWeight,
+                        '${r['birth_weight']} kg',
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.abnormalities,
+                        r['abnormalities'],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.dischargeDate,
                         r['discharge_date']?.split('T')[0],
                       ),
-                      _row('Special Notes', r['special_notes']),
+                      _row(
+                        AppLocalizations.of(context)!.specialNotes,
+                        r['special_notes'],
+                      ),
                     ],
                   ),
                 ),

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from . import models, schemas
 from .risk_engine import RiskEngine # NEW
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_, func, extract
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 
@@ -380,6 +380,7 @@ def delete_appointment(db: Session, appointment_id: int):
 
 # --- ANC Visits ---
 def create_anc_visit(db: Session, visit: schemas.ANCVisitCreate):
+    db_visit = models.ANCVisit(**visit.dict())
     db.add(db_visit)
     db.commit()
     db.refresh(db_visit)
@@ -522,38 +523,7 @@ def get_mothers_by_risk(db: Session, midwife_id: int, risk_type: str):
 
 
 
-def create_leave_request(db: Session, leave: schemas.LeaveRequestCreate, midwife_id: int):
-    # Check for overlapping requests
-    # Logic: (StartA <= EndB) and (EndA >= StartB)
-    overlap = db.query(models.LeaveRequest).filter(
-        models.LeaveRequest.midwife_id == midwife_id,
-        models.LeaveRequest.status != "Rejected",  # Ignore rejected ones
-        and_(
-            models.LeaveRequest.start_date <= leave.end_date,
-            models.LeaveRequest.end_date >= leave.start_date
-        )
-    ).first()
 
-    if overlap:
-        return None
-
-    db_leave = models.LeaveRequest(
-        **leave.dict(),
-        midwife_id=midwife_id,
-        status="Pending"
-    )
-    db.add(db_leave)
-    db.commit()
-    db.refresh(db_leave)
-    return db_leave
-
-def get_leave_requests_by_midwife(db: Session, midwife_id: int):
-    return db.query(models.LeaveRequest).filter(models.LeaveRequest.midwife_id == midwife_id).all()
-
-def get_all_leave_requests(db: Session):
-    return db.query(models.LeaveRequest).all()
-
-    return db_leave
 
 # ---------------------------------------------------------
 # ---------------- SMART CARE PLAN LOGIC ------------------
@@ -1081,18 +1051,17 @@ def get_moh_dashboard_stats(db: Session, moh_office_id: int):
         models.Mother.status == "Pregnant"
     ).count()
     
+
     # Pending Leave Requests
     pending_leaves = db.query(models.LeaveRequest).filter(
         models.LeaveRequest.midwife_id.in_(midwife_ids),
         models.LeaveRequest.status == "Pending"
     ).count()
     
-    # 2. Growth Analytics (Last 6 Months)
-    # Midwife Growth - AGNOSTIC PYTHON GROUPING
+    # Growth Analytics (Last 6 Months)
     today = datetime.now()
     six_months_ago = today - timedelta(days=180)
     
-    # Fetch raw data
     midwives_growth_raw = db.query(models.Midwife).filter(
         models.Midwife.moh_office_id == moh_office_id,
         models.Midwife.created_at >= six_months_ago
@@ -1103,11 +1072,9 @@ def get_moh_dashboard_stats(db: Session, moh_office_id: int):
         models.Mother.created_at >= six_months_ago
     ).all()
     
-    # Helper to group by month
     from collections import defaultdict
     def group_by_month(items):
         grouped = defaultdict(int)
-        # Initialize last 6 months with 0
         for i in range(5, -1, -1):
             d = today - timedelta(days=i*30)
             key = d.strftime("%Y-%m")
@@ -1118,22 +1085,14 @@ def get_moh_dashboard_stats(db: Session, moh_office_id: int):
                 key = item.created_at.strftime("%Y-%m")
                 if key in grouped:
                     grouped[key] += 1
-        
-        # Sort and Format
-        sorted_keys = sorted(grouped.keys())
-        labels = [datetime.strptime(k, "%Y-%m").strftime("%b") for k in sorted_keys]
-        values = [grouped[k] for k in sorted_keys]
-        return {"labels": labels, "values": values}
+        return {"labels": sorted(grouped.keys()), "values": [grouped[k] for k in sorted(grouped.keys())]}
 
     charts = {
         "midwife_growth": group_by_month(midwives_growth_raw),
         "mother_growth": group_by_month(mothers_growth_raw)
     }
 
-    # 3. Workload Leaderboard
-
-    # 3. Workload Leaderboard
-    # Top 5 Midwives by Patient Count
+    # Workload Leaderboard
     workload = db.query(
         models.Midwife.username,
         func.count(models.Mother.id)
@@ -1141,7 +1100,7 @@ def get_moh_dashboard_stats(db: Session, moh_office_id: int):
         models.Midwife.moh_office_id == moh_office_id,
         models.Mother.status.in_(["Pregnant", "Postnatal"])
     ).group_by(models.Midwife.username).order_by(func.count(models.Mother.id).desc()).limit(5).all()
-    
+
     leaderboard = [{"name": w[0], "count": w[1]} for w in workload]
 
     return {
@@ -1154,8 +1113,92 @@ def get_moh_dashboard_stats(db: Session, moh_office_id: int):
         "charts": charts,
         "leaderboard": leaderboard
     }
+
+def get_analytics_hotspots(db: Session, office_id: int):
+    # 1. Get Midwives in Office
+    midwives = db.query(models.Midwife).filter(models.Midwife.moh_office_id == office_id).all()
+    
+    data = []
+    for mw in midwives:
+        # Count High Risk Mothers
+        count = db.query(models.Mother)\
+            .filter(models.Mother.midwife_id == mw.id)\
+            .filter(models.Mother.risk_level == "High")\
+            .filter(models.Mother.status == "Pregnant")\
+            .count()
+            
+        if count > 0:
+            data.append({"area": mw.assigned_moh_area, "count": count})
+            
+    return data
+
+def get_analytics_defaulters(db: Session, office_id: int):
+    # Silent Risk Detector: Count defaulters per Midwife Area
+    midwives = db.query(models.Midwife).filter(models.Midwife.moh_office_id == office_id).all()
+    
+    today = datetime.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    data = []
+    for mw in midwives:
+        # Get High Risk Mothers
+        risk_mothers = db.query(models.Mother).filter(
+            models.Mother.midwife_id == mw.id,
+            models.Mother.risk_level == "High",
+            models.Mother.status == "Pregnant"
+        ).all()
+        
+        defaulter_count = 0
+        for m in risk_mothers:
+            # Check last visit
+            last_visit = db.query(models.ANCVisit).filter(
+                models.ANCVisit.mother_id == m.id
+            ).order_by(models.ANCVisit.visit_date.desc()).first()
+            
+            last_seen = last_visit.visit_date if last_visit else (m.pregnancy_start_date or today)
+            
+            if last_seen < thirty_days_ago:
+                defaulter_count += 1
+                
+        if defaulter_count > 0:
+            data.append({"area": mw.assigned_moh_area, "count": defaulter_count})
+            
+    return data
+
+def get_analytics_forecast(db: Session, office_id: int):
+    # Delivery Forecast: Count High Risk Deliveries per Week (Next 30 Days)
+    today = datetime.now().date()
+    next_month = today + timedelta(days=30)
+    
+    # Get High Risk Active Pregnancies due next month
+    # Join with Midwife for filtering
+    results = db.query(models.PregnancyRecord)\
+        .join(models.Mother)\
+        .join(models.Midwife)\
+        .filter(models.Midwife.moh_office_id == office_id)\
+        .filter(models.Mother.risk_level == "High")\
+        .filter(models.Mother.status == "Pregnant")\
+        .filter(models.PregnancyRecord.edd >= today)\
+        .filter(models.PregnancyRecord.edd <= next_month)\
+        .all()
+        
+    weekly_counts = {"Week 1": 0, "Week 2": 0, "Week 3": 0, "Week 4": 0}
+    
+    for rec in results:
+        days_until = (rec.edd - today).days
+        if days_until < 7:
+            weekly_counts["Week 1"] += 1
+        elif days_until < 14:
+            weekly_counts["Week 2"] += 1
+        elif days_until < 21:
+            weekly_counts["Week 3"] += 1
+        else:
+            weekly_counts["Week 4"] += 1
             
     return [{"week": k, "count": v} for k, v in weekly_counts.items() if v > 0]
+
+
+
 
 # --- MIDWIFE SPECIFIC ANALYTICS (DETAILED) ---
 
@@ -1213,4 +1256,117 @@ def get_midwife_forecast(db: Session, midwife_id: int):
         })
         
     return sorted(forecast, key=lambda x: x['edd'])
+
+# --- DETAILED ANALYTICS AGGREGATION (Privacy Focused: Counts Only) ---
+
+def get_analytics_registration_timing(db: Session, office_id: int):
+    # Total Pregnant Mothers (Active)
+    # Join with Midwife to filter by Office
+    total = db.query(models.PregnancyRecord)\
+        .join(models.Mother)\
+        .join(models.Midwife)\
+        .filter(models.Midwife.moh_office_id == office_id)\
+        .count()
+    
+    if total == 0:
+        return {"before_8_weeks": 0, "after_8_weeks": 0, "total": 0}
+
+    # "Early" is < 8 weeks. We store "poa_at_registration" as string (e.g. "6 weeks"). 
+    # Ideally this should be parsed or stored as int. 
+    # For now, let's look at created_at vs LRMP difference if possible, or parse string.
+    # Fallback: Let's assume performant SQL or python filter if dataset small. 
+    # Python filter for safety with string "X weeks"
+    
+    records = db.query(models.PregnancyRecord)\
+        .join(models.Mother)\
+        .join(models.Midwife)\
+        .filter(models.Midwife.moh_office_id == office_id)\
+        .all()
+        
+    early = 0
+    for r in records:
+        try:
+            # Format "X weeks"
+            weeks = int(r.poa_at_registration.split(" ")[0])
+            if weeks < 8:
+                early += 1
+        except:
+            pass # Skip invalid data
             
+    return {
+        "before_8_weeks": early,
+        "after_8_weeks": total - early,
+        "total": total
+    }
+
+def get_analytics_delivery_outcomes(db: Session, office_id: int):
+    # Filter by Midwfe Office
+    query = db.query(models.DeliveryRecord)\
+        .join(models.Mother)\
+        .join(models.Midwife)\
+        .filter(models.Midwife.moh_office_id == office_id)
+        
+    total = query.count()
+    if total == 0:
+        return {"normal": 0, "cs": 0, "home": 0, "total": 0}
+        
+    normal = query.filter(models.DeliveryRecord.delivery_mode.ilike("%Normal%")).count()
+    lscs = query.filter(models.DeliveryRecord.delivery_mode.ilike("%LSCS%")).count() # Caesarean
+    # Assume distinct for simplicity in specialized chart, home deliveries rare but possible
+    
+    return {
+        "normal": normal,
+        "cs": lscs,
+        "other": total - (normal + lscs),
+        "total": total
+    }
+
+def get_analytics_nutrition_newborn(db: Session, office_id: int):
+    # Low Birth Weight (< 2.5kg)
+    query = db.query(models.DeliveryRecord)\
+        .join(models.Mother)\
+        .join(models.Midwife)\
+        .filter(models.Midwife.moh_office_id == office_id)
+        
+    total = query.count()
+    if total == 0:
+        return {"low_weight": 0, "normal_weight": 0, "total": 0}
+        
+    low_weight = query.filter(models.DeliveryRecord.birth_weight < 2.5).count()
+    
+    return {
+        "low_weight": low_weight,
+        "normal_weight": total - low_weight,
+        "total": total
+    }
+
+def get_analytics_midwife_performance(db: Session, office_id: int):
+    # Visits done this month by Midwife
+    # Group by Midwife Name (Aggregate)
+    
+    # 1. Get Midwives in this office
+    midwives = db.query(models.Midwife).filter(models.Midwife.moh_office_id == office_id).all()
+    
+    data = []
+    current_month = datetime.now().month
+    current_year = datetime.now().year
+    
+    for mw in midwives:
+        # Count Completed Appointments
+        count = db.query(models.Appointment)\
+            .filter(models.Appointment.midwife_id == mw.id)\
+            .filter(models.Appointment.status == "Completed")\
+            .filter(extract('month', models.Appointment.date_time) == current_month)\
+            .filter(extract('year', models.Appointment.date_time) == current_year)\
+            .count()
+            
+        # Use simple name or "Area X" for privacy if needed, but MOH internal usually sees Midwife Name
+        # User said "MOH officers wont see any details of a mother". Midwife performance is staff management.
+        data.append({
+            "midwife_name": mw.full_name,
+            "visits": count
+        })
+        
+    # Sort by performance
+    data.sort(key=lambda x: x['visits'], reverse=True)
+    return data

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../models/mother.dart';
 import '../services/api_service.dart';
+
+// ... (skipping unchanged parts)
 
 class PregnancyRegistrationScreen extends StatefulWidget {
   final Mother mother;
@@ -291,35 +294,59 @@ class _PregnancyRegistrationScreenState
         final ageCtrl = TextEditingController();
 
         return AlertDialog(
-          title: Text("Add Past Pregnancy ($order)"),
+          title: Text(AppLocalizations.of(context)!.addPastPregnancy(order)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
                   value: outcome,
-                  decoration: InputDecoration(labelText: "Outcome"),
-                  items: ["Live Birth", "Still Birth", "Abortion"]
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.outcome,
+                  ),
+                  items: ["Live Birth", "Still Birth", "Abortion"].map((s) {
+                    String label = s;
+                    if (s == "Live Birth")
+                      label = AppLocalizations.of(context)!.liveBirth;
+                    else if (s == "Still Birth")
+                      label = AppLocalizations.of(context)!.stillBirth;
+                    else if (s == "Abortion")
+                      label = AppLocalizations.of(context)!.abortion;
+                    return DropdownMenuItem(value: s, child: Text(label));
+                  }).toList(),
                   onChanged: (v) => outcome = v!,
                 ),
                 DropdownButtonFormField<String>(
                   value: delivery,
-                  decoration: InputDecoration(labelText: "Mode of Delivery"),
-                  items: ["Normal", "LSCS", "Forceps", "Vacuum"]
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.modeOfDelivery,
+                  ),
+                  items: ["Normal", "LSCS", "Forceps", "Vacuum"].map((s) {
+                    String label = s;
+                    if (s == "Normal")
+                      label = AppLocalizations.of(context)!.normal;
+                    else if (s == "LSCS")
+                      label = AppLocalizations.of(context)!.lscs;
+                    else if (s == "Forceps")
+                      label = AppLocalizations.of(context)!.forceps;
+                    else if (s == "Vacuum")
+                      label = AppLocalizations.of(context)!.vacuum;
+                    return DropdownMenuItem(value: s, child: Text(label));
+                  }).toList(),
                   onChanged: (v) => delivery = v!,
                 ),
                 TextField(
                   controller: weightCtrl,
-                  decoration: InputDecoration(labelText: "Birth Weight (kg)"),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.birthWeightKg,
+                  ),
                   keyboardType: TextInputType.number,
                 ),
                 TextField(
                   controller: ageCtrl,
-                  decoration: InputDecoration(labelText: "Age if Alive"),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.ageIfAlive,
+                  ),
                 ),
               ],
             ),
@@ -327,7 +354,7 @@ class _PregnancyRegistrationScreenState
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text("Cancel"),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             ElevatedButton(
               onPressed: () {
@@ -345,7 +372,7 @@ class _PregnancyRegistrationScreenState
                 });
                 Navigator.pop(ctx);
               },
-              child: Text("Add"),
+              child: Text(AppLocalizations.of(context)!.add),
             ),
           ],
         );
@@ -372,7 +399,7 @@ class _PregnancyRegistrationScreenState
           children: [
             Expanded(
               child: RadioListTile<bool>(
-                title: Text("Yes"),
+                title: Text(AppLocalizations.of(context)!.yes),
                 value: true,
                 groupValue: currentValue,
                 onChanged: (v) => onChanged(v!),
@@ -382,7 +409,7 @@ class _PregnancyRegistrationScreenState
             ),
             Expanded(
               child: RadioListTile<bool>(
-                title: Text("No"),
+                title: Text(AppLocalizations.of(context)!.no),
                 value: false,
                 groupValue: currentValue,
                 onChanged: (v) => onChanged(v!),
@@ -501,8 +528,8 @@ class _PregnancyRegistrationScreenState
           SnackBar(
             content: Text(
               widget.existingData != null
-                  ? "Record Updated Successfully!"
-                  : "Pregnancy Registered Successfully!",
+                  ? AppLocalizations.of(context)!.recordUpdated
+                  : AppLocalizations.of(context)!.pregnancyRegistered,
             ),
           ),
         );
@@ -515,6 +542,30 @@ class _PregnancyRegistrationScreenState
       ).showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  String _getTranslatedRisk(String key, BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
+    switch (key) {
+      case 'Age < 20 or > 35':
+        return loc.riskAge;
+      case '5th Pregnancy or more':
+        return loc.risk5thPreg;
+      case 'Birth Interval < 1yr':
+        return loc.riskBirthInterval;
+      case 'History of PPH':
+        return loc.riskHistoryPPH;
+      case 'Diabetes':
+        return loc.riskDiabetes;
+      case 'Malaria':
+        return loc.riskMalaria;
+      case 'Heart Disease':
+        return loc.riskHeart;
+      case 'Renal Disease':
+        return loc.riskRenal;
+      default:
+        return key;
     }
   }
 
@@ -554,24 +605,32 @@ class _PregnancyRegistrationScreenState
                 steps: [
                   // STEP 1: Admin
                   Step(
-                    title: Text("1. Registration & Admin"),
+                    title: Text(AppLocalizations.of(context)!.step1Title),
                     content: Column(
                       children: [
                         TextFormField(
                           controller: _regDateController,
-                          decoration: InputDecoration(labelText: "Reg Date"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.regDate,
+                          ),
                           readOnly: true,
                           onTap: () => _selectDate(_regDateController),
                         ),
                         TextFormField(
                           controller: _regNoController,
-                          decoration: InputDecoration(labelText: "Reg No"),
-                          validator: (v) => v!.isEmpty ? "Required" : null,
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.regNo,
+                          ),
+                          validator: (v) => v!.isEmpty
+                              ? AppLocalizations.of(context)!.required
+                              : null,
                         ),
                         TextFormField(
                           controller: _familyRegController,
                           decoration: InputDecoration(
-                            labelText: "Family Reg No",
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.familyRegNo,
                           ),
                         ),
                         // --- MOH Area Cascading Dropdowns ---
@@ -588,14 +647,16 @@ class _PregnancyRegistrationScreenState
                                   ),
                                 ),
                                 SizedBox(width: 10),
-                                Text("Loading MOH Offices..."),
+                                Text(AppLocalizations.of(context)!.loadingMOH),
                               ],
                             ),
                           )
                         else ...[
                           DropdownButtonFormField<String>(
                             value: _selectedProvince,
-                            decoration: InputDecoration(labelText: "Province"),
+                            decoration: InputDecoration(
+                              labelText: AppLocalizations.of(context)!.province,
+                            ),
                             items: _mohOffices.keys
                                 .map(
                                   (p) => DropdownMenuItem(
@@ -617,7 +678,9 @@ class _PregnancyRegistrationScreenState
                           DropdownButtonFormField<String>(
                             value: _selectedDistrict,
                             decoration: InputDecoration(
-                              labelText: "Health District",
+                              labelText: AppLocalizations.of(
+                                context,
+                              )!.healthDistrict,
                             ),
                             items: _selectedProvince == null
                                 ? []
@@ -644,7 +707,9 @@ class _PregnancyRegistrationScreenState
                           SizedBox(height: 10),
                           DropdownButtonFormField<String>(
                             value: _selectedMOH,
-                            decoration: InputDecoration(labelText: "MOH Area"),
+                            decoration: InputDecoration(
+                              labelText: AppLocalizations.of(context)!.mohArea,
+                            ),
                             items: _selectedDistrict == null
                                 ? []
                                 : (_mohOffices[_selectedProvince][_selectedDistrict]
@@ -664,8 +729,9 @@ class _PregnancyRegistrationScreenState
                                       _mohAreaController.text = val!;
                                     });
                                   },
-                            validator: (v) =>
-                                v == null || v.isEmpty ? "Required" : null,
+                            validator: (v) => v == null || v.isEmpty
+                                ? AppLocalizations.of(context)!.required
+                                : null,
                           ),
                         ],
 
@@ -673,18 +739,22 @@ class _PregnancyRegistrationScreenState
                         // We updated _mohAreaController in onChanged, so it's fine.
                         TextFormField(
                           controller: _phiAreaController,
-                          decoration: InputDecoration(labelText: "PHI Area"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.phiArea,
+                          ),
                         ),
                         TextFormField(
                           controller: _gnDivisionController,
                           decoration: InputDecoration(
-                            labelText: "Gramaniladhari Division",
+                            labelText: AppLocalizations.of(context)!.gnDivision,
                           ),
                         ),
                         TextFormField(
                           controller: _distanceController,
                           decoration: InputDecoration(
-                            labelText: "Distance to Clinic (km)",
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.distanceToClinic,
                           ),
                           keyboardType: TextInputType.number,
                         ),
@@ -695,53 +765,69 @@ class _PregnancyRegistrationScreenState
 
                   // STEP 2: Personal (Mother & Husband)
                   Step(
-                    title: Text("2. Personal Info (Mother & Husband)"),
+                    title: Text(AppLocalizations.of(context)!.step2Title),
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Mother:",
+                          AppLocalizations.of(context)!.motherLabel,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         TextFormField(
                           controller: _motherAgeController,
-                          decoration: InputDecoration(labelText: "Age"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.age,
+                          ),
                           keyboardType: TextInputType.number,
-                          validator: (v) => v!.isEmpty ? "Required" : null,
+                          validator: (v) => v!.isEmpty
+                              ? AppLocalizations.of(context)!.required
+                              : null,
                         ),
                         TextFormField(
                           controller: _motherEducationController,
                           decoration: InputDecoration(
-                            labelText: "Education Level",
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.educationLevel,
                           ),
                         ),
                         TextFormField(
                           controller: _motherOccupationController,
-                          decoration: InputDecoration(labelText: "Occupation"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.occupation,
+                          ),
                         ),
                         Divider(),
                         Text(
-                          "Husband:",
+                          AppLocalizations.of(context)!.husbandLabel,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         TextFormField(
                           controller: _husbandNameController,
-                          decoration: InputDecoration(labelText: "Name"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.name,
+                          ),
                         ),
                         TextFormField(
                           controller: _husbandAgeController,
-                          decoration: InputDecoration(labelText: "Age"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.age,
+                          ),
                           keyboardType: TextInputType.number,
                         ),
                         TextFormField(
                           controller: _husbandEducationController,
                           decoration: InputDecoration(
-                            labelText: "Education Level",
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.educationLevel,
                           ),
                         ),
                         TextFormField(
                           controller: _husbandOccupationController,
-                          decoration: InputDecoration(labelText: "Occupation"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.occupation,
+                          ),
                         ),
                       ],
                     ),
@@ -750,27 +836,37 @@ class _PregnancyRegistrationScreenState
 
                   // STEP 3: Vitals & Medical History
                   Step(
-                    title: Text("3. Vitals & Medical History"),
+                    title: Text(AppLocalizations.of(context)!.step3Title),
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         TextFormField(
                           controller: _heightController,
-                          decoration: InputDecoration(labelText: "Height (cm)"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.heightCm,
+                          ),
                           keyboardType: TextInputType.number,
                           onChanged: (_) => _calculateBMI(),
-                          validator: (v) => v!.isEmpty ? "Required" : null,
+                          validator: (v) => v!.isEmpty
+                              ? AppLocalizations.of(context)!.required
+                              : null,
                         ),
                         TextFormField(
                           controller: _weightController,
-                          decoration: InputDecoration(labelText: "Weight (kg)"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.weightKg,
+                          ),
                           keyboardType: TextInputType.number,
                           onChanged: (_) => _calculateBMI(),
-                          validator: (v) => v!.isEmpty ? "Required" : null,
+                          validator: (v) => v!.isEmpty
+                              ? AppLocalizations.of(context)!.required
+                              : null,
                         ),
                         TextFormField(
                           controller: _bmiController,
-                          decoration: InputDecoration(labelText: "BMI (Auto)"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.bmiAuto,
+                          ),
                           readOnly: true,
                         ),
                         DropdownButtonFormField<String>(
@@ -785,33 +881,35 @@ class _PregnancyRegistrationScreenState
                                   )
                                   .toList(),
                           onChanged: (v) => setState(() => _bloodGroup = v!),
-                          decoration: InputDecoration(labelText: "Blood Group"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.bloodGroup,
+                          ),
                         ),
                         SizedBox(height: 16),
 
                         _buildYesNoField(
-                          "Consanguineous Marriage?",
+                          AppLocalizations.of(context)!.consanguineousMarriage,
                           _consanguinity,
                           (v) => setState(() => _consanguinity = v),
                         ),
                         Divider(),
                         _buildYesNoField(
-                          "Rubella Immunization?",
+                          AppLocalizations.of(context)!.rubellaImmunization,
                           _rubella,
                           (v) => setState(() => _rubella = v),
                         ),
                         _buildYesNoField(
-                          "Pre-Pregnancy Screening?",
+                          AppLocalizations.of(context)!.prePregnancyScreening,
                           _preScreening,
                           (v) => setState(() => _preScreening = v),
                         ),
                         _buildYesNoField(
-                          "Folic Acid Taken?",
+                          AppLocalizations.of(context)!.folicAcidTaken,
                           _folicAcid,
                           (v) => setState(() => _folicAcid = v),
                         ),
                         _buildYesNoField(
-                          "History of Subfertility?",
+                          AppLocalizations.of(context)!.subfertilityHistory,
                           _subfertility,
                           (v) => setState(() => _subfertility = v),
                         ),
@@ -822,7 +920,7 @@ class _PregnancyRegistrationScreenState
 
                   // STEP 4: Family Details & Past History
                   Step(
-                    title: Text("4. Family & Obstetric History"),
+                    title: Text(AppLocalizations.of(context)!.step4Title),
                     content: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -833,11 +931,13 @@ class _PregnancyRegistrationScreenState
                               child: TextFormField(
                                 controller: _gravidityController,
                                 decoration: InputDecoration(
-                                  labelText: "Gravidity (G)",
+                                  labelText:
+                                      "${AppLocalizations.of(context)!.gravidity} (G)",
                                 ),
                                 keyboardType: TextInputType.number,
-                                validator: (v) =>
-                                    v!.isEmpty ? "Required" : null,
+                                validator: (v) => v!.isEmpty
+                                    ? AppLocalizations.of(context)!.required
+                                    : null,
                               ),
                             ),
                             SizedBox(width: 10),
@@ -845,11 +945,13 @@ class _PregnancyRegistrationScreenState
                               child: TextFormField(
                                 controller: _parityController,
                                 decoration: InputDecoration(
-                                  labelText: "Parity (P)",
+                                  labelText:
+                                      "${AppLocalizations.of(context)!.parity} (P)",
                                 ),
                                 keyboardType: TextInputType.number,
-                                validator: (v) =>
-                                    v!.isEmpty ? "Required" : null,
+                                validator: (v) => v!.isEmpty
+                                    ? AppLocalizations.of(context)!.required
+                                    : null,
                               ),
                             ),
                           ],
@@ -857,22 +959,24 @@ class _PregnancyRegistrationScreenState
                         SizedBox(height: 10),
 
                         Text(
-                          "Family History:",
+                          AppLocalizations.of(context)!.familyHistory,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         CheckboxListTile(
-                          title: Text("Diabetes"),
+                          title: Text(AppLocalizations.of(context)!.diabetes),
                           value: _famDiabetes,
                           onChanged: (v) => setState(() => _famDiabetes = v!),
                         ),
                         CheckboxListTile(
-                          title: Text("Hypertension"),
+                          title: Text(
+                            AppLocalizations.of(context)!.hypertension,
+                          ),
                           value: _famHypertension,
                           onChanged: (v) =>
                               setState(() => _famHypertension = v!),
                         ),
                         CheckboxListTile(
-                          title: Text("Twins"),
+                          title: Text(AppLocalizations.of(context)!.twins),
                           value: _famTwins,
                           onChanged: (v) => setState(() => _famTwins = v!),
                         ),
@@ -881,7 +985,7 @@ class _PregnancyRegistrationScreenState
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              "Past Pregnancies:",
+                              AppLocalizations.of(context)!.pastPregnancies,
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             IconButton(
@@ -891,7 +995,9 @@ class _PregnancyRegistrationScreenState
                           ],
                         ),
                         _pastPregnancies.isEmpty
-                            ? Text("No past pregnancies added.")
+                            ? Text(
+                                AppLocalizations.of(context)!.noPastPregnancies,
+                              )
                             : ListView.builder(
                                 shrinkWrap: true,
                                 physics: NeverScrollableScrollPhysics(),
@@ -908,7 +1014,7 @@ class _PregnancyRegistrationScreenState
                                       ),
                                       subtitle: Text(
                                         p['age_if_alive'] != null
-                                            ? "Age: ${p['age_if_alive']}"
+                                            ? "${AppLocalizations.of(context)!.ageIfAlive}: ${p['age_if_alive']}"
                                             : "",
                                       ),
                                       trailing: IconButton(
@@ -931,28 +1037,34 @@ class _PregnancyRegistrationScreenState
 
                   // STEP 5: Dating
                   Step(
-                    title: Text("5. Dating (LMP & EDD)"),
+                    title: Text(AppLocalizations.of(context)!.step5Title),
                     content: Column(
                       children: [
                         TextFormField(
                           controller: _lmpController,
                           decoration: InputDecoration(
-                            labelText: "LMP",
+                            labelText: AppLocalizations.of(context)!.lrmp,
                             suffixIcon: Icon(Icons.calendar_today),
                           ),
                           readOnly: true,
                           onTap: () => _selectDate(_lmpController),
-                          validator: (v) => v!.isEmpty ? "Required" : null,
+                          validator: (v) => v!.isEmpty
+                              ? AppLocalizations.of(context)!.required
+                              : null,
                         ),
                         TextFormField(
                           controller: _eddController,
-                          decoration: InputDecoration(labelText: "EDD"),
+                          decoration: InputDecoration(
+                            labelText: AppLocalizations.of(context)!.edd,
+                          ),
                           readOnly: true,
                         ),
                         TextFormField(
                           controller: _usEddController,
                           decoration: InputDecoration(
-                            labelText: "US Corrected EDD",
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.usCorrectedEdd,
                           ),
                           readOnly: true,
                           onTap: () => _selectDate(_usEddController),
@@ -960,7 +1072,7 @@ class _PregnancyRegistrationScreenState
                         TextFormField(
                           controller: _poaController,
                           decoration: InputDecoration(
-                            labelText: "POA at Registration",
+                            labelText: AppLocalizations.of(context)!.poaReg,
                           ),
                         ),
                       ],
@@ -970,11 +1082,11 @@ class _PregnancyRegistrationScreenState
 
                   // STEP 6: Risk Assessment
                   Step(
-                    title: Text("6. Risk Assessment"),
+                    title: Text(AppLocalizations.of(context)!.step6Title),
                     content: Column(
                       children: _risks.keys.map((key) {
                         return CheckboxListTile(
-                          title: Text(key),
+                          title: Text(_getTranslatedRisk(key, context)),
                           value: _risks[key],
                           onChanged: (val) {
                             setState(() {

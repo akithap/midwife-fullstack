@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/custom_card.dart';
@@ -11,8 +12,8 @@ import 'upcoming_meetings_screen.dart';
 import 'change_password_screen.dart';
 import '../services/api_service.dart';
 import '../models/appointment.dart';
+import '../models/mother.dart';
 import 'mother_health_file_screen.dart';
-
 import '../services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'chat_screen.dart';
@@ -26,6 +27,7 @@ class MotherHomeScreen extends StatefulWidget {
 class _MotherHomeScreenState extends State<MotherHomeScreen> {
   final ApiService _apiService = ApiService();
   final NotificationService _notificationService = NotificationService();
+  Mother? _mother;
 
   // Notification State
   Timer? _pollingTimer;
@@ -34,11 +36,25 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchMotherData();
     _initNotifications();
     _checkUpcomingAppointments();
     _checkDailyTipNotification();
     _fetchNotifications();
     _startPolling();
+  }
+
+  Future<void> _fetchMotherData() async {
+    try {
+      final mother = await _apiService.getMotherProfile();
+      if (mounted) {
+        setState(() {
+          _mother = mother;
+        });
+      }
+    } catch (e) {
+      print("Error loading mother profile: $e");
+    }
   }
 
   @override
@@ -74,11 +90,12 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
       }
 
       if (isBackground && count > 0) {
+        if (!mounted) return;
         // Simple notification for now
         NotificationService().showNotification(
           id: 888,
-          title: "New Message from Midwife",
-          body: "You have $count unread messages.",
+          title: AppLocalizations.of(context)!.newMessageTitle,
+          body: AppLocalizations.of(context)!.newMessageBody(count),
           payload: "mother_chat_screen",
         );
       }
@@ -91,7 +108,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text("Notifications"),
+        title: Text(AppLocalizations.of(context)!.notifications),
         content: Container(
           width: double.maxFinite,
           child: Column(
@@ -100,8 +117,10 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
               if (_unreadCount > 0)
                 ListTile(
                   leading: Icon(Icons.chat, color: Colors.blue),
-                  title: Text("$_unreadCount New Messages"),
-                  subtitle: Text("From Midwife"),
+                  title: Text(
+                    "$_unreadCount ${AppLocalizations.of(context)!.newMessages}",
+                  ),
+                  subtitle: Text(AppLocalizations.of(context)!.fromMidwife),
                   onTap: () {
                     Navigator.pop(ctx);
                     // We know there's only one midwife usually, so we can route cleaner in future
@@ -111,13 +130,16 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
               if (_unreadCount == 0)
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text("No new messages"),
+                  child: Text(AppLocalizations.of(context)!.noNewMessages),
                 ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text("Close")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocalizations.of(context)!.close),
+          ),
         ],
       ),
     );
@@ -146,12 +168,13 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
         final todayStr = DateFormat('yyyy-MM-dd').format(now);
 
         if (lastNotifiedDate != todayStr) {
+          if (!mounted) return;
           final dateStr = DateFormat('MMM dd, yyyy').format(nextAppt.dateTime);
 
           await _notificationService.showNotification(
             id: 2, // Different ID from Midwife
-            title: 'Upcoming Appointment',
-            body: 'You have your next appointment on $dateStr',
+            title: AppLocalizations.of(context)!.upcomingApptTitle,
+            body: AppLocalizations.of(context)!.upcomingApptBody(dateStr),
             payload: 'mother_appointment',
           );
 
@@ -177,9 +200,10 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
         // Clean up tip for notification (remove "Hey Name," prefix if it's too long or keep it?)
         // Let's keep it personalized but maybe shorten title.
 
+        if (!mounted) return;
         await _notificationService.showNotification(
           id: 3, // Unique ID for Tips
-          title: 'Daily Wisdom 💡',
+          title: "${AppLocalizations.of(context)!.dailyWisdom} 💡",
           body: tip,
           payload: 'daily_tip',
         );
@@ -199,7 +223,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text('My Health'),
+        title: Text(AppLocalizations.of(context)!.myHealth),
         elevation: 0,
         actions: [
           IconButton(
@@ -243,7 +267,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
           ),
           IconButton(
             icon: Icon(Icons.vpn_key),
-            tooltip: 'Change Password',
+            tooltip: AppLocalizations.of(context)!.changePassword,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => ChangePasswordScreen()),
@@ -283,21 +307,24 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'Welcome, Mother!',
+                      AppLocalizations.of(context)!.welcomeMother(
+                        _mother != null
+                            ? _mother!.fullName.split(' ').first
+                            : "Mother",
+                      ),
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Track your pregnancy journey.',
+                      AppLocalizations.of(context)!.trackPregnancyJourney,
                       style: theme.textTheme.bodyMedium,
                     ),
                   ],
                 ),
               ),
               SizedBox(height: 16),
-
               // New Health Tip Card
               _buildHealthTipCard(theme), // Added this line
 
@@ -324,7 +351,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
 
               SizedBox(height: 10),
               Text(
-                'My Records',
+                AppLocalizations.of(context)!.myRecords,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -335,8 +362,8 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
               _buildMenuCard(
                 context,
                 icon: Icons.folder_shared_outlined,
-                title: 'My Health File',
-                subtitle: 'View complete medical history',
+                title: AppLocalizations.of(context)!.myHealthFile,
+                subtitle: AppLocalizations.of(context)!.viewMedicalHistory,
                 color: Colors.teal,
                 onTap: () async {
                   try {
@@ -364,7 +391,11 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                   } catch (e) {
                     Navigator.pop(context); // Hide loading
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to load profile')),
+                      SnackBar(
+                        content: Text(
+                          AppLocalizations.of(context)!.failedToLoadProfile,
+                        ),
+                      ),
                     );
                   }
                 },
@@ -373,8 +404,10 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
               _buildMenuCard(
                 context,
                 icon: Icons.calendar_today,
-                title: 'Upcoming Meetings',
-                subtitle: 'View scheduled appointments',
+                title: AppLocalizations.of(context)!.upcomingMeetings,
+                subtitle: AppLocalizations.of(
+                  context,
+                )!.viewScheduledAppointments,
                 color: Colors.blueAccent,
                 onTap: () => Navigator.push(
                   context,
@@ -407,7 +440,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
               MaterialPageRoute(
                 builder: (_) => ChatScreen(
                   otherUserId: mother.midwifeId,
-                  otherUserName: "My Midwife",
+                  otherUserName: AppLocalizations.of(context)!.myMidwife,
                   myRole: UserRole.mother,
                 ),
               ),
@@ -415,11 +448,15 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
           } catch (e) {
             Navigator.pop(context); // Hide loading
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to connect to Midwife')),
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)!.failedToConnectMidwife,
+                ),
+              ),
             );
           }
         },
-        label: Text('Contact Midwife'),
+        label: Text(AppLocalizations.of(context)!.contactMidwife),
         icon: Icon(Icons.chat),
         backgroundColor: theme.colorScheme.secondary,
       ),
@@ -457,7 +494,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                 Icon(Icons.calendar_today, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  'Upcoming Appointment',
+                  AppLocalizations.of(context)!.upcomingAppointment,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -471,7 +508,7 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'CONFIRMED',
+                    AppLocalizations.of(context)!.confirmed,
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -490,7 +527,20 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat('MMM dd').format(apt.dateTime),
+                      AppLocalizations.of(context)!.welcomeMother(
+                        _mother != null
+                            ? _mother!.fullName.split(' ').first
+                            : AppLocalizations.of(context)!.genericMother,
+                      ),
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      DateFormat(
+                        'MMM dd',
+                        Localizations.localeOf(context).toString(),
+                      ).format(apt.dateTime),
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -498,7 +548,10 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                       ),
                     ),
                     Text(
-                      DateFormat('yyyy').format(apt.dateTime),
+                      DateFormat(
+                        'yyyy',
+                        Localizations.localeOf(context).toString(),
+                      ).format(apt.dateTime),
                       style: TextStyle(color: theme.textTheme.bodySmall?.color),
                     ),
                   ],
@@ -514,7 +567,11 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        apt.visitType,
+                        apt.visitType == 'Home Visit'
+                            ? AppLocalizations.of(context)!.homeVisit
+                            : (apt.visitType == 'Clinic'
+                                  ? AppLocalizations.of(context)!.clinic
+                                  : apt.visitType),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -523,7 +580,10 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        DateFormat('hh:mm a').format(apt.dateTime),
+                        DateFormat(
+                          'hh:mm a',
+                          Localizations.localeOf(context).toString(),
+                        ).format(apt.dateTime),
                         style: TextStyle(
                           fontSize: 14,
                           color: theme.textTheme.bodyMedium?.color,
@@ -638,7 +698,11 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
                   ),
                   SizedBox(width: 10),
                   Text(
-                    "Daily Wisdom",
+                    _mother != null
+                        ? AppLocalizations.of(
+                            context,
+                          )!.dailyWisdomFor(_mother!.fullName.split(' ').first)
+                        : AppLocalizations.of(context)!.dailyWisdom,
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -649,7 +713,19 @@ class _MotherHomeScreenState extends State<MotherHomeScreen> {
               ),
               SizedBox(height: 12),
               Text(
-                snapshot.data!,
+                () {
+                  String tip = snapshot.data!;
+                  // Avoid duplication if the tip itself is the generic greeting
+                  if (tip.trim() == "Enjoy your day!" ||
+                      tip.trim() == "Enjoy your day.") {
+                    return _mother != null
+                        ? AppLocalizations.of(
+                            context,
+                          )!.enjoyYourDay(_mother!.fullName.split(' ').first)
+                        : tip;
+                  }
+                  return "$tip\n\n${_mother != null ? AppLocalizations.of(context)!.enjoyYourDay(_mother!.fullName.split(' ').first) : "Enjoy your day!"}";
+                }(),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15,

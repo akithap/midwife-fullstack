@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/api_service.dart';
 
 class MyPregnancyScreen extends StatefulWidget {
@@ -23,7 +24,7 @@ class _MyPregnancyScreenState extends State<MyPregnancyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Pregnancy Records'),
+        title: Text(AppLocalizations.of(context)!.myPregnancyRecords),
         backgroundColor: Colors.pink,
       ),
       body: FutureBuilder<List<dynamic>>(
@@ -32,9 +33,13 @@ class _MyPregnancyScreenState extends State<MyPregnancyScreen> {
           if (snapshot.connectionState == ConnectionState.waiting)
             return Center(child: CircularProgressIndicator());
           if (snapshot.hasError)
-            return Center(child: Text('Error loading records'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.errorLoadingMeetings),
+            ); // Reusing generic error or create new
           if (!snapshot.hasData || snapshot.data!.isEmpty)
-            return Center(child: Text('No records found.'));
+            return Center(
+              child: Text(AppLocalizations.of(context)!.noRecordsFound),
+            );
 
           final records = snapshot.data!;
           // Just showing the latest one for simplicity, or list if multiple
@@ -50,9 +55,8 @@ class _MyPregnancyScreenState extends State<MyPregnancyScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // FIXED: Removed backslashes from string interpolation
                       Text(
-                        'Record #${r['id']}',
+                        '${AppLocalizations.of(context)!.recordNumber}${r['id']}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -60,19 +64,29 @@ class _MyPregnancyScreenState extends State<MyPregnancyScreen> {
                         ),
                       ),
                       Divider(),
-                      _row('Blood Group', r['blood_group']),
-                      // FIXED: Removed backslashes
-                      _row('BMI', '${r['bmi']}'),
-                      _row('Height (cm)', '${r['height_cm']}'),
-                      _row('Allergies', r['allergies']),
-                      _row('Risks', r['identified_risks']),
-                      // FIXED: Added null check before split
                       _row(
-                        'EDD',
+                        AppLocalizations.of(context)!.bloodGroup,
+                        r['blood_group'],
+                      ),
+                      _row(AppLocalizations.of(context)!.bmi, '${r['bmi']}'),
+                      _row(
+                        AppLocalizations.of(context)!.height,
+                        '${r['height_cm']}',
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.allergies,
+                        r['allergies'],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.riskFactors,
+                        r['identified_risks'],
+                      ),
+                      _row(
+                        AppLocalizations.of(context)!.edd,
                         r['edd'] != null ? r['edd'].split('T')[0] : 'N/A',
                       ),
                       _row(
-                        'LRMP',
+                        AppLocalizations.of(context)!.lrmp,
                         r['lrmp'] != null ? r['lrmp'].split('T')[0] : 'N/A',
                       ),
                     ],

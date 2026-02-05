@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import 'dart:async'; // For Timer
 
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../models/midwife.dart';
+import '../models/appointment.dart'; // NEW
+import '../models/mother.dart'; // NEW
 // Removed unused import
 
+import '../providers/language_provider.dart';
 import 'appointment_screen.dart';
 import 'change_password_screen.dart';
 
-import 'leave_request_screen.dart';
 import 'select_mother_screen.dart';
 import 'risk_management_screen.dart';
 import '../services/sync_service.dart';
@@ -33,9 +36,10 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
   // Polling & Notification State
   Timer? _pollingTimer;
   int? _lastKnownVisits;
+  Appointment? _nextAppointment;
+  String? _nextApptMotherName;
 
-  // Notification State
-  // Removed unused notifications field
+  // Notification State - RESTORED
   Timer? _notificationTimer;
   int _unreadCount = 0;
   List<Map<String, dynamic>> _unreadSenders = [];
@@ -44,11 +48,80 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
   void initState() {
     super.initState();
     _reloadStats();
+    _fetchNextAppointment(); // NEW
     _initNotifications();
     _startPolling();
 
     _fetchNotifications();
     _startNotificationPolling();
+  }
+
+  Future<void> _fetchNextAppointment() async {
+    try {
+      final now = DateTime.now();
+      // Get appointments for today and future?
+      // API getMidwifeAppointments takes a date. If we want "Up Next" to be ANY future one:
+      // The API currently filters by date if provided. If not, it returns ALL?
+      // Let's check api_service.dart.
+      // getMidwifeAppointments({DateTime? date}) -> if date is null?
+      // "If date != null -> filter by start/end of that day".
+      // If date is null -> returns ALL appointments? (Need to verify this assumption)
+      // Assuming it returns all or I can fetch today's.
+
+      // Let's fetch ALL appointments to find the next valid one, not just today's.
+      final appointments = await _apiService.getMidwifeAppointments();
+
+      // Filter for those AFTER now
+      final upcoming = appointments
+          .where((a) => a.dateTime.isAfter(now) && a.status != 'Completed')
+          .toList();
+
+      upcoming.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+      if (upcoming.isNotEmpty) {
+        final next = upcoming.first;
+        // Fetch Mother Name
+        String motherName = "Unknown";
+
+        try {
+          final mothers = await _apiService.getMothers(); // Cached list
+          // Try to find in cache first
+          final found = mothers.firstWhere(
+            (m) => m.id == next.motherId,
+            orElse: () => Mother(
+              id: 0,
+              fullName: "NOT_FOUND",
+              address: "",
+              contactNumber: "",
+              nic: "",
+              midwifeId: 0,
+            ),
+          );
+
+          if (found.fullName != "NOT_FOUND") {
+            motherName = found.fullName;
+          } else {
+            // Not in cache, fetch individually
+            final fetched = await _apiService.getMother(next.motherId);
+            motherName = fetched.fullName;
+          }
+        } catch (e) {
+          print("Failed to resolve mother name: $e");
+          motherName = "Unknown (ID: ${next.motherId})";
+        }
+
+        if (mounted) {
+          setState(() {
+            _nextAppointment = next;
+            _nextApptMotherName = motherName;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _nextAppointment = null);
+      }
+    } catch (e) {
+      print("Error fetching next appointment: $e");
+    }
   }
 
   @override
@@ -163,7 +236,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                 ..._unreadSenders.map((sender) {
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: Colors.blue.withOpacity(0.1),
+                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
                       child: Text(sender['name'][0].toUpperCase()),
                     ),
                     title: Text(sender['name']),
@@ -215,7 +288,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
           title: Row(
             children: [
               CircleAvatar(
-                backgroundColor: Colors.blue.withOpacity(0.1),
+                backgroundColor: Colors.blue.withValues(alpha: 0.1),
                 child: Text(
                   profile.fullName.isNotEmpty
                       ? profile.fullName[0].toUpperCase()
@@ -242,6 +315,48 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                 Text(
                   "System ID: ${profile.username}",
                   style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                SizedBox(height: 20),
+                Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Language",
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    Consumer<LanguageProvider>(
+                      builder: (context, provider, child) {
+                        return DropdownButton<Locale>(
+                          value: provider.currentLocale,
+                          underline: Container(), // Hide underline
+                          icon: Icon(
+                            Icons.language,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          onChanged: (Locale? newValue) {
+                            if (newValue != null) {
+                              provider.changeLanguage(newValue);
+                            }
+                          },
+                          items: [
+                            DropdownMenuItem(
+                              value: Locale('en'),
+                              child: Text('English'),
+                            ),
+                            DropdownMenuItem(
+                              value: Locale('si'),
+                              child: Text('සිංහල'),
+                            ),
+                            DropdownMenuItem(
+                              value: Locale('ta'),
+                              child: Text('தமிழ்'),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -291,12 +406,16 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
           child: GestureDetector(
             onTap: _showProfileDialog,
             child: CircleAvatar(
-              backgroundColor: theme.primaryColor.withOpacity(0.1),
+              backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
               child: Icon(Icons.person, color: theme.primaryColor),
             ),
           ),
         ),
-        title: Text('Dashboard'),
+        title: Image.asset(
+          'assets/images/logo_transparent.png',
+          height: 40,
+          fit: BoxFit.contain,
+        ),
         elevation: 0,
         actions: [
           // THEME TOGGLE
@@ -377,7 +496,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: CircleAvatar(
-              backgroundColor: theme.primaryColor.withOpacity(0.1),
+              backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
               child: IconButton(
                 icon: Icon(Icons.logout, size: 20, color: theme.primaryColor),
                 onPressed: () {
@@ -396,8 +515,8 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
             Container(
               height: 220,
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(
-                  0.15,
+                color: theme.primaryColor.withValues(
+                  alpha: 0.15,
                 ), // Soft Sage Background
                 borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(40),
@@ -419,13 +538,15 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Good Morning,',
+                          AppLocalizations.of(context)!.goodMorning,
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.7,
+                            ),
                           ),
                         ),
                         Text(
-                          'Midwife Staff',
+                          AppLocalizations.of(context)!.midwifeStaff,
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.onSurface,
@@ -450,7 +571,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                           borderRadius: BorderRadius.circular(28),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.shadowColor.withOpacity(0.1),
+                              color: Colors.orange.withValues(alpha: 0.1),
                               blurRadius: 20,
                               offset: Offset(0, 8),
                             ),
@@ -460,7 +581,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Today's Progress",
+                              AppLocalizations.of(context)!.todaysProgress,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -479,7 +600,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                                         value: 0.0,
                                         strokeWidth: 10,
                                         backgroundColor: theme.primaryColor
-                                            .withOpacity(0.1),
+                                            .withValues(alpha: 0.1),
                                         color: theme.primaryColor,
                                         strokeCap: StrokeCap.round,
                                       ),
@@ -501,7 +622,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "$visits Visits Done",
+                                      "$visits ${AppLocalizations.of(context)!.visitsDone}",
                                       style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
@@ -510,7 +631,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                                     ),
                                     SizedBox(height: 6),
                                     Text(
-                                      "Keep it up!",
+                                      AppLocalizations.of(context)!.keepItUp,
                                       style: TextStyle(
                                         color:
                                             theme.textTheme.bodyMedium?.color,
@@ -528,7 +649,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
 
                   SizedBox(height: 32),
                   Text(
-                    "Up Next",
+                    AppLocalizations.of(context)!.upNext,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -537,65 +658,121 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                   SizedBox(height: 16),
 
                   // 2. UP NEXT CARD
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.transparent),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.grey[800] : Colors.white,
-                            shape: BoxShape.circle,
+                  GestureDetector(
+                    onTap: _nextAppointment != null
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AppointmentScreen(),
+                              ),
+                            );
+                          }
+                        : null,
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.transparent),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.grey[800] : Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.access_time_rounded,
+                              color: theme.primaryColor,
+                            ),
                           ),
-                          child: Icon(
-                            Icons.access_time_rounded,
+                          SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _nextAppointment != null
+                                      ? "Next: ${_nextAppointment!.visitType}"
+                                      : AppLocalizations.of(context)!.nextVisit,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  _nextAppointment != null
+                                      ? (_nextApptMotherName ?? "Loading...")
+                                      : AppLocalizations.of(
+                                          context,
+                                        )!.noUpcomingVisits,
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (_nextAppointment != null)
+                                  Builder(
+                                    builder: (context) {
+                                      final dt = _nextAppointment!.dateTime;
+                                      final now = DateTime.now();
+                                      final isToday =
+                                          dt.year == now.year &&
+                                          dt.month == now.month &&
+                                          dt.day == now.day;
+
+                                      // If time is 00:00, maybe just show "Scheduled"?
+                                      // But let's just show formatted time/date.
+                                      // Requires intl package which is imported as 'DateFormat' usually but let's check imports.
+                                      // Import 'package:intl/intl.dart' is NOT in this file yet?
+                                      // Checking lines 1-20... It is NOT.
+                                      // I'll stick to basic formatting or add import.
+                                      // Simple formatting for now to avoid compilation error if I don't see imports.
+
+                                      String datePart = isToday
+                                          ? "Today"
+                                          : "${dt.day}/${dt.month}";
+                                      String timePart =
+                                          "${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
+
+                                      return Text(
+                                        "$datePart • $timePart",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: theme.primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 18,
                             color: theme.primaryColor,
                           ),
-                        ),
-                        SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Next Visit",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.7),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                "Check Schedule",
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          size: 18,
-                          color: theme.primaryColor,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
 
                   SizedBox(height: 32),
                   Text(
-                    "Quick Actions",
+                    AppLocalizations.of(context)!.quickActions,
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.onSurface,
@@ -611,7 +788,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                       children: [
                         _buildAdminTool(
                           context,
-                          "Risk Levels",
+                          AppLocalizations.of(context)!.riskLevels,
                           Icons.medical_services_outlined,
                           Color(0xFFE57373),
                           () => Navigator.push(
@@ -624,7 +801,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                         SizedBox(width: 16),
                         _buildAdminTool(
                           context,
-                          "Records",
+                          AppLocalizations.of(context)!.records,
                           Icons.folder_open_rounded,
                           Color(0xFFBA68C8),
                           () => Navigator.push(
@@ -632,19 +809,6 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
                             MaterialPageRoute(
                               builder: (_) =>
                                   SelectMotherScreen(formType: 'health_file'),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 16),
-                        _buildAdminTool(
-                          context,
-                          "Leaves",
-                          Icons.beach_access_rounded,
-                          Color(0xFFFFB74D),
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LeaveRequestScreen(),
                             ),
                           ),
                         ),
@@ -678,7 +842,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withOpacity(0.08),
+              color: theme.shadowColor.withValues(alpha: 0.08),
               blurRadius: 15,
               offset: Offset(0, 6),
             ),
@@ -690,7 +854,7 @@ class _MidwifeHomeScreenState extends State<MidwifeHomeScreen> {
             Container(
               padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 28),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 
 import '../models/mother.dart';
 import '../services/api_service.dart';
@@ -70,7 +71,10 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Health File", style: TextStyle(fontSize: 16)),
+            Text(
+              AppLocalizations.of(context)!.healthFile,
+              style: TextStyle(fontSize: 16),
+            ),
             Text(
               widget.mother.fullName,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
@@ -85,10 +89,22 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
           labelColor: isDark ? Colors.white : theme.primaryColor,
           unselectedLabelColor: isDark ? Colors.white70 : Colors.black54,
           tabs: [
-            Tab(text: "Registration", icon: Icon(Icons.description)),
-            Tab(text: "ANC Log", icon: Icon(Icons.table_chart)),
-            Tab(text: "PNC Log", icon: Icon(Icons.child_care)),
-            Tab(text: "Charts", icon: Icon(Icons.show_chart)),
+            Tab(
+              text: AppLocalizations.of(context)!.registration,
+              icon: Icon(Icons.description),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.ancLog,
+              icon: Icon(Icons.table_chart),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.pncLog,
+              icon: Icon(Icons.child_care),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.charts,
+              icon: Icon(Icons.show_chart),
+            ),
           ],
         ),
       ),
@@ -109,7 +125,9 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
   // --- TAB 1: Registration ---
   Widget _buildRegistrationTab(ThemeData theme) {
     if (_pregnancyRecord == null) {
-      return Center(child: Text("No Pregnancy Registration Record Found"));
+      return Center(
+        child: Text(AppLocalizations.of(context)!.noRegistrationRecord),
+      );
     }
     final r = _pregnancyRecord!;
 
@@ -118,41 +136,47 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildInfoCard("Personal Info", [
-            "Age: ${r['mother_age']} years",
-            "Education: ${r['mother_education'] ?? 'N/A'}",
-            "Occupation: ${r['mother_occupation'] ?? 'N/A'}",
-            "Husband: ${r['husband_name'] ?? 'N/A'} (${r['husband_age']}y)",
+          _buildInfoCard(AppLocalizations.of(context)!.personalInfo, [
+            "${AppLocalizations.of(context)!.age}: ${r['mother_age']} ${AppLocalizations.of(context)!.years}",
+            "${AppLocalizations.of(context)!.education}: ${r['mother_education'] ?? 'N/A'}",
+            "${AppLocalizations.of(context)!.occupation}: ${r['mother_occupation'] ?? 'N/A'}",
+            "${AppLocalizations.of(context)!.husband}: ${r['husband_name'] ?? 'N/A'} (${r['husband_age']}${AppLocalizations.of(context)!.years})",
           ], theme),
-          _buildInfoCard("Obstetric History", [
-            "Gravidity (G): ${r['gravidity']}",
-            "Parity (P): ${r['parity']}",
-            "Living Children: ${r['num_living_children'] ?? 0}", // FIX: Handle null
-            "Youngest Child: ${r['age_of_youngest_child'] ?? 'N/A'}",
+          _buildInfoCard(AppLocalizations.of(context)!.obstetricHistory, [
+            "${AppLocalizations.of(context)!.gravidity}: ${r['gravidity']}",
+            "${AppLocalizations.of(context)!.parity}: ${r['parity']}",
+            "${AppLocalizations.of(context)!.livingChildren}: ${r['num_living_children'] ?? 0}", // FIX: Handle null
+            "${AppLocalizations.of(context)!.youngestChild}: ${r['age_of_youngest_child'] ?? 'N/A'}",
           ], theme),
-          _buildInfoCard("Current Pregnancy", [
-            "LRMP: ${r['lrmp']}",
-            "EDD: ${r['edd']}",
-            "POA at Reg: ${r['poa_at_registration']}",
-            "BMI: ${r['bmi']}",
-            "Height: ${r['height_cm']} cm",
-            "Weight: ${r['weight_kg']} kg",
-            "Blood Group: ${r['blood_group'] ?? 'N/A'}",
+          _buildInfoCard(AppLocalizations.of(context)!.currentPregnancy, [
+            "${AppLocalizations.of(context)!.lrmp}: ${r['lrmp']}",
+            "${AppLocalizations.of(context)!.edd}: ${r['edd']}",
+            "${AppLocalizations.of(context)!.poaAtReg}: ${r['poa_at_registration']}",
+            "${AppLocalizations.of(context)!.bmi}: ${r['bmi']}",
+            "${AppLocalizations.of(context)!.height}: ${r['height_cm']} cm",
+            "${AppLocalizations.of(context)!.weight}: ${r['weight_kg']} kg",
+            "${AppLocalizations.of(context)!.bloodGroup}: ${r['blood_group'] ?? 'N/A'}",
           ], theme),
           _buildInfoCard(
-            "Risk Factors",
+            AppLocalizations.of(context)!.riskFactors,
             [
-              if (r['risk_age_lt_20_gt_35'] == true) "• Age Risk (<20 or >35)",
-              if (r['risk_5th_pregnancy'] == true) "• Grand Multipara (>5)",
+              if (r['risk_age_lt_20_gt_35'] == true)
+                AppLocalizations.of(context)!.riskAge,
+              if (r['risk_5th_pregnancy'] == true)
+                AppLocalizations.of(context)!.riskGrandMultipara,
               if (r['risk_birth_interval_lt_1yr'] == true)
-                "• Birth Interval < 1 year",
-              if (r['risk_diabetes'] == true) "• Diabetes",
-              if (r['risk_malaria'] == true) "• History of Malaria",
-              if (r['risk_cardiac'] == true) "• Heart Disease",
-              if (r['risk_renal'] == true) "• Renal Disease",
+                AppLocalizations.of(context)!.riskBirthInterval,
+              if (r['risk_diabetes'] == true)
+                AppLocalizations.of(context)!.riskDiabetes,
+              if (r['risk_malaria'] == true)
+                AppLocalizations.of(context)!.riskMalaria,
+              if (r['risk_cardiac'] == true)
+                AppLocalizations.of(context)!.riskHeart,
+              if (r['risk_renal'] == true)
+                AppLocalizations.of(context)!.riskRenal,
               // Add more risks as needed
               if (r['other_risk_factors'] != null)
-                "• Other: ${r['other_risk_factors']}",
+                "${AppLocalizations.of(context)!.riskOther}: ${r['other_risk_factors']}",
             ],
             theme,
             isWarning: true,
@@ -209,7 +233,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                 .toList(),
             if (lines.isEmpty)
               Text(
-                "None Recorded",
+                AppLocalizations.of(context)!.noneRecorded,
                 style: TextStyle(
                   fontStyle: FontStyle.italic,
                   color: theme.disabledColor,
@@ -224,7 +248,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
   // --- TAB 2: ANC Table ---
   Widget _buildANCHistoryTab(ThemeData theme) {
     if (_ancVisits.isEmpty) {
-      return Center(child: Text("No ANC Visits Recorded Yet"));
+      return Center(child: Text(AppLocalizations.of(context)!.noAncVisits));
     }
 
     // Sort reverse chronological
@@ -253,7 +277,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            "Date: ${v['visit_date']}",
+                            "${AppLocalizations.of(context)!.date}: ${v['visit_date']}",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isDark
@@ -262,39 +286,47 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                             ),
                           ),
                           Text(
-                            "POA: ${v['poa_weeks']}w",
+                            "${AppLocalizations.of(context)!.poa}: ${v['poa_weeks']}w",
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                       Divider(color: theme.dividerColor),
                       _buildGridItem(
-                        "Weight",
+                        AppLocalizations.of(context)!.weight,
                         "${v['weight_kg'] ?? '-'} kg",
                         theme,
                       ),
                       _buildGridItem(
-                        "BP",
+                        AppLocalizations.of(context)!.bp,
                         "${v['bp_systolic']}/${v['bp_diastolic']}",
                         theme,
                       ),
                       _buildGridItem(
-                        "Fundal H",
+                        AppLocalizations.of(context)!.fundalHeight,
                         "${v['fundal_height_cm'] ?? '-'} cm",
                         theme,
                       ),
-                      _buildGridItem("Lie", v['fetal_lie'] ?? '-', theme),
                       _buildGridItem(
-                        "FHS",
+                        AppLocalizations.of(context)!.lie,
+                        v['fetal_lie'] ?? '-',
+                        theme,
+                      ),
+                      _buildGridItem(
+                        AppLocalizations.of(context)!.fhs,
                         v['fetal_heart_sound'] ?? '-',
                         theme,
                       ),
                       _buildGridItem(
-                        "Urine",
+                        AppLocalizations.of(context)!.urine,
                         "S:${v['urine_sugar']} A:${v['urine_albumin']}",
                         theme,
                       ),
-                      _buildGridItem("Edema", v['oedema'] ?? '-', theme),
+                      _buildGridItem(
+                        AppLocalizations.of(context)!.edema,
+                        v['oedema'] ?? '-',
+                        theme,
+                      ),
                     ],
                   ),
                 ),
@@ -314,15 +346,17 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                       : Colors.teal.shade50,
                 ),
                 columns: [
-                  DataColumn(label: Text("Date")),
-                  DataColumn(label: Text("POA")),
-                  DataColumn(label: Text("Weight")),
-                  DataColumn(label: Text("BP")),
-                  DataColumn(label: Text("Fundal H")),
-                  DataColumn(label: Text("Lie")),
-                  DataColumn(label: Text("FHS")),
-                  DataColumn(label: Text("Urine")),
-                  DataColumn(label: Text("Edema")),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.date)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.poa)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.weight)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.bp)),
+                  DataColumn(
+                    label: Text(AppLocalizations.of(context)!.fundalHeight),
+                  ),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.lie)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.fhs)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.urine)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.edema)),
                 ],
                 rows: visits.map<DataRow>((v) {
                   return DataRow(
@@ -443,7 +477,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
   // --- TAB 3: PNC Table ---
   Widget _buildPNCLogTab(ThemeData theme) {
     if (_pncVisits.isEmpty) {
-      return Center(child: Text("No PNC Visits Recorded Yet"));
+      return Center(child: Text(AppLocalizations.of(context)!.noPncVisits));
     }
 
     final visits = List.from(_pncVisits.reversed);
@@ -458,12 +492,14 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
             itemCount: visits.length,
             itemBuilder: (context, index) {
               final v = visits[index];
-              String infection = "No";
+              String infection = AppLocalizations.of(context)!.no;
               if (v['perineum_infection'] == true ||
                   v['fissure_infection'] == true) {
-                infection = "Yes";
+                infection = AppLocalizations.of(context)!.yes;
               }
-              String ref = v['referred_to_hospital'] == true ? "YES" : "No";
+              String ref = v['referred_to_hospital'] == true
+                  ? AppLocalizations.of(context)!.yes.toUpperCase()
+                  : AppLocalizations.of(context)!.no;
 
               return Card(
                 elevation: 2,
@@ -477,7 +513,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            "Date: ${v['visit_date']}",
+                            "${AppLocalizations.of(context)!.date}: ${v['visit_date']}",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isDark
@@ -485,24 +521,34 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                                   : Colors.purple,
                             ),
                           ),
-                          Text("Temp: ${v['temperature'] ?? '-'} °C"),
+                          Text(
+                            "${AppLocalizations.of(context)!.temp}: ${v['temperature'] ?? '-'} °C",
+                          ),
                         ],
                       ),
                       Divider(color: theme.dividerColor),
-                      _buildGridItem("Infection", infection, theme),
                       _buildGridItem(
-                        "Lochia",
+                        AppLocalizations.of(context)!.infection,
+                        infection,
+                        theme,
+                      ),
+                      _buildGridItem(
+                        AppLocalizations.of(context)!.lochia,
                         v['lochia_character'] ?? '-',
                         theme,
                       ),
                       _buildGridItem(
-                        "Baby Color",
+                        AppLocalizations.of(context)!.babyColor,
                         v['baby_color'] ?? '-',
                         theme,
                       ),
-                      _buildGridItem("Cord", v['cord_status'] ?? '-', theme),
                       _buildGridItem(
-                        "Feeding",
+                        AppLocalizations.of(context)!.cord,
+                        v['cord_status'] ?? '-',
+                        theme,
+                      ),
+                      _buildGridItem(
+                        AppLocalizations.of(context)!.feeding,
                         v['breastfeeding'] ?? '-',
                         theme,
                       ),
@@ -513,7 +559,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                             Expanded(
                               flex: 2,
                               child: Text(
-                                "Hospital Ref",
+                                AppLocalizations.of(context)!.hospitalRef,
                                 style: TextStyle(
                                   color: theme.textTheme.bodyMedium?.color
                                       ?.withOpacity(0.7),
@@ -527,7 +573,11 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                                 ref,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: ref == "YES"
+                                  color:
+                                      ref ==
+                                          AppLocalizations.of(
+                                            context,
+                                          )!.yes.toUpperCase()
                                       ? Colors.red
                                       : theme.textTheme.bodyLarge?.color,
                                 ),
@@ -555,23 +605,33 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                       : Colors.purple.shade50,
                 ),
                 columns: [
-                  DataColumn(label: Text("Date")),
-                  DataColumn(label: Text("Temp")),
-                  DataColumn(label: Text("Infection")), // Perineum/C-Sec
-                  DataColumn(label: Text("Lochia")),
-                  DataColumn(label: Text("Baby Color")),
-                  DataColumn(label: Text("Cord")),
-                  DataColumn(label: Text("Feeding")),
-                  DataColumn(label: Text("Hospital Ref")),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.date)),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.temp)),
+                  DataColumn(
+                    label: Text(AppLocalizations.of(context)!.infection),
+                  ), // Perineum/C-Sec
+                  DataColumn(label: Text(AppLocalizations.of(context)!.lochia)),
+                  DataColumn(
+                    label: Text(AppLocalizations.of(context)!.babyColor),
+                  ),
+                  DataColumn(label: Text(AppLocalizations.of(context)!.cord)),
+                  DataColumn(
+                    label: Text(AppLocalizations.of(context)!.feeding),
+                  ),
+                  DataColumn(
+                    label: Text(AppLocalizations.of(context)!.hospitalRef),
+                  ),
                 ],
                 rows: visits.map<DataRow>((v) {
                   // Formatting Helpers
-                  String infection = "No";
+                  String infection = AppLocalizations.of(context)!.no;
                   if (v['perineum_infection'] == true ||
                       v['fissure_infection'] == true) {
-                    infection = "Yes";
+                    infection = AppLocalizations.of(context)!.yes;
                   }
-                  String ref = v['referred_to_hospital'] == true ? "YES" : "No";
+                  String ref = v['referred_to_hospital'] == true
+                      ? AppLocalizations.of(context)!.yes.toUpperCase()
+                      : AppLocalizations.of(context)!.no;
 
                   return DataRow(
                     cells: [
@@ -595,10 +655,12 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                         Text(
                           infection,
                           style: TextStyle(
-                            color: infection == "Yes"
+                            color:
+                                infection == AppLocalizations.of(context)!.yes
                                 ? Colors.red
                                 : theme.textTheme.bodyMedium?.color,
-                            fontWeight: infection == "Yes"
+                            fontWeight:
+                                infection == AppLocalizations.of(context)!.yes
                                 ? FontWeight.bold
                                 : null,
                           ),
@@ -640,10 +702,20 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
                         Text(
                           ref,
                           style: TextStyle(
-                            color: ref == "YES"
+                            color:
+                                ref ==
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.yes.toUpperCase()
                                 ? Colors.red
                                 : theme.textTheme.bodyMedium?.color,
-                            fontWeight: ref == "YES" ? FontWeight.bold : null,
+                            fontWeight:
+                                ref ==
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.yes.toUpperCase()
+                                ? FontWeight.bold
+                                : null,
                           ),
                         ),
                       ),
@@ -666,7 +738,7 @@ class _MotherHealthFileScreenState extends State<MotherHealthFileScreen>
         children: [
           Icon(Icons.show_chart, size: 64, color: Colors.grey),
           SizedBox(height: 16),
-          Text("Weight Gain Chart Coming Soon"),
+          Text(AppLocalizations.of(context)!.weightGainChartComingSoon),
           // Placeholder: FlChart implementation would go here
         ],
       ),

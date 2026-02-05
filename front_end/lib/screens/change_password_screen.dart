@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/api_service.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
@@ -47,7 +48,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Password Changed Successfully!'),
+          content: Text(AppLocalizations.of(context)!.passwordChangedSuccess),
           backgroundColor: Colors.green,
         ),
       );
@@ -55,7 +56,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed: Incorrect Old Password'),
+          content: Text(AppLocalizations.of(context)!.incorrectOldPassword),
           backgroundColor: Colors.red,
         ),
       );
@@ -67,7 +68,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Change Password'),
+        title: Text(
+          AppLocalizations.of(context)!.updatePassword,
+        ), // Reusing 'updatePassword' for title if appropriate or create 'changePassword'
         // backgroundColor: Colors.pink, // Handled by Theme
       ),
       body: Padding(
@@ -79,34 +82,36 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               TextFormField(
                 controller: _oldPassController,
                 decoration: InputDecoration(
-                  labelText: 'Old Password',
+                  labelText: AppLocalizations.of(context)!.oldPassword,
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) =>
+                    v!.isEmpty ? AppLocalizations.of(context)!.required : null,
               ),
               SizedBox(height: 16),
               TextFormField(
                 controller: _newPassController,
                 decoration: InputDecoration(
-                  labelText: 'New Password',
+                  labelText: AppLocalizations.of(context)!.newPassword,
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (v) =>
-                    v!.length < 6 ? 'Must be at least 6 characters' : null,
+                validator: (v) => v!.length < 6
+                    ? AppLocalizations.of(context)!.minSixChars
+                    : null,
               ),
               SizedBox(height: 16),
               TextFormField(
                 controller: _confirmPassController,
                 decoration: InputDecoration(
-                  labelText: 'Confirm New Password',
+                  labelText: AppLocalizations.of(context)!.confirmNewPassword,
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
                 validator: (v) {
                   if (v != _newPassController.text)
-                    return 'Passwords do not match';
+                    return AppLocalizations.of(context)!.passwordsDoNotMatch;
                   return null;
                 },
               ),
@@ -115,7 +120,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ? CircularProgressIndicator()
                   : ElevatedButton(
                       onPressed: _changePassword,
-                      child: Text('UPDATE PASSWORD'),
+                      child: Text(AppLocalizations.of(context)!.updatePassword),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.brightness == Brightness.dark
                             ? theme.colorScheme.secondary

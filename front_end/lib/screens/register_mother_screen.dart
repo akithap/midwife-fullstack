@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart'; // Import Geolocator
+import 'package:front_end/l10n/app_localizations.dart';
 import '../services/api_service.dart';
 import '../models/mother.dart';
 
@@ -56,7 +57,11 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() => _locationStatus = "Location services disabled.");
+      setState(
+        () => _locationStatus = AppLocalizations.of(
+          context,
+        )!.locationServiceDisabled,
+      );
       return;
     }
 
@@ -64,13 +69,21 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() => _locationStatus = "Location permission denied.");
+        setState(
+          () => _locationStatus = AppLocalizations.of(
+            context,
+          )!.locationPermissionDenied,
+        );
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      setState(() => _locationStatus = "Location permanently denied.");
+      setState(
+        () => _locationStatus = AppLocalizations.of(
+          context,
+        )!.locationPermanentlyDenied,
+      );
       return;
     }
 
@@ -82,10 +95,14 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
         _latitude = position.latitude;
         _longitude = position.longitude;
         _locationStatus =
-            "Pinned: ${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}";
+            "${AppLocalizations.of(context)!.pinned}: ${_latitude!.toStringAsFixed(4)}, ${_longitude!.toStringAsFixed(4)}";
       });
     } catch (e) {
-      setState(() => _locationStatus = "Error getting location.");
+      setState(
+        () => _locationStatus = AppLocalizations.of(
+          context,
+        )!.errorGettingLocation,
+      );
     }
   }
 
@@ -124,7 +141,11 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_isEditing ? 'Mother updated!' : 'Mother registered!'),
+          content: Text(
+            _isEditing
+                ? AppLocalizations.of(context)!.motherUpdated
+                : AppLocalizations.of(context)!.motherRegistered,
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -132,7 +153,7 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Operation failed. Please check inputs.'),
+          content: Text(AppLocalizations.of(context)!.operationFailed),
           backgroundColor: Colors.red,
         ),
       );
@@ -143,7 +164,11 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Mother Details' : 'Register New Mother'),
+        title: Text(
+          _isEditing
+              ? AppLocalizations.of(context)!.editMotherDetails
+              : AppLocalizations.of(context)!.registerNewMother,
+        ),
         backgroundColor: Colors.teal,
       ),
       body: Padding(
@@ -154,15 +179,23 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: 'Full Name'),
-                validator: (val) => val!.isEmpty ? 'Name is required' : null,
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.fullName,
+                ),
+                validator: (val) => val!.isEmpty
+                    ? AppLocalizations.of(context)!.nameRequired
+                    : null,
               ),
               SizedBox(height: 16),
               TextFormField(
                 controller: _nicController,
-                decoration: InputDecoration(labelText: 'NIC Number'),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.nicNumber,
+                ),
                 enabled: !_isEditing,
-                validator: (val) => val!.isEmpty ? 'NIC is required' : null,
+                validator: (val) => val!.isEmpty
+                    ? AppLocalizations.of(context)!.nicRequired
+                    : null,
               ),
               SizedBox(height: 16),
 
@@ -172,13 +205,15 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _addressController,
-                      decoration: InputDecoration(labelText: 'Address'),
+                      decoration: InputDecoration(
+                        labelText: AppLocalizations.of(context)!.address,
+                      ),
                     ),
                   ),
                   IconButton(
                     icon: Icon(Icons.location_on, color: Colors.red),
                     onPressed: _getCurrentLocation,
-                    tooltip: "Pin Current Location",
+                    tooltip: AppLocalizations.of(context)!.pinCurrentLocation,
                   ),
                 ],
               ),
@@ -194,17 +229,22 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
               SizedBox(height: 16),
               TextFormField(
                 controller: _contactController,
-                decoration: InputDecoration(labelText: 'Contact Number'),
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.contactNumber,
+                ),
                 keyboardType: TextInputType.phone,
               ),
               if (!_isEditing) ...[
                 SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: InputDecoration(labelText: 'Temporary Password'),
+                  decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.temporaryPassword,
+                  ),
                   obscureText: true,
-                  validator: (val) =>
-                      val!.isEmpty ? 'Password is required' : null,
+                  validator: (val) => val!.isEmpty
+                      ? AppLocalizations.of(context)!.passwordRequired
+                      : null,
                 ),
               ],
               SizedBox(height: 32),
@@ -213,7 +253,9 @@ class _RegisterMotherScreenState extends State<RegisterMotherScreen> {
                   : ElevatedButton(
                       onPressed: _saveMother,
                       child: Text(
-                        _isEditing ? 'Update Details' : 'Register Mother',
+                        _isEditing
+                            ? AppLocalizations.of(context)!.updateDetails
+                            : AppLocalizations.of(context)!.registerMother,
                       ),
                     ),
             ],

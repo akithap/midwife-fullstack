@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 
 class MotherLoginScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _MotherLoginScreenState extends State<MotherLoginScreen> {
       if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login Failed. Please check your credentials.'),
+            content: Text(AppLocalizations.of(context)!.loginFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -49,7 +50,7 @@ class _MotherLoginScreenState extends State<MotherLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mother Portal Login'),
+        title: Text(AppLocalizations.of(context)!.motherPortalLogin),
         backgroundColor: Colors.teal.shade700,
       ),
       body: Padding(
@@ -61,7 +62,7 @@ class _MotherLoginScreenState extends State<MotherLoginScreen> {
             TextField(
               controller: _nicController,
               decoration: InputDecoration(
-                labelText: 'NIC Number',
+                labelText: AppLocalizations.of(context)!.nicNumber,
                 prefixIcon: Icon(Icons.badge_outlined),
               ),
             ),
@@ -69,7 +70,7 @@ class _MotherLoginScreenState extends State<MotherLoginScreen> {
             TextField(
               controller: _passwordController,
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: AppLocalizations.of(context)!.password,
                 prefixIcon: Icon(Icons.lock_outline),
               ),
               obscureText: true,
@@ -82,7 +83,7 @@ class _MotherLoginScreenState extends State<MotherLoginScreen> {
                       backgroundColor: Colors.teal.shade700,
                     ),
                     onPressed: () => _login(context),
-                    child: Text('Login as Mother'),
+                    child: Text(AppLocalizations.of(context)!.loginAsMother),
                   ),
           ],
         ),

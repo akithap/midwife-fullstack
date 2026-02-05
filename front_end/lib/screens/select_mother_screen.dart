@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/mother.dart';
+import 'package:front_end/l10n/app_localizations.dart';
 import 'pregnancy_record_form.dart';
 import 'delivery_record_form.dart';
 import 'antenatal_plan_form.dart';
@@ -85,7 +86,7 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text("Select Mother"),
+        title: Text(AppLocalizations.of(context)!.selectMother),
         // Remove hardcoded teal, let AppTheme handle it
       ),
       body: Padding(
@@ -95,7 +96,7 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: "Search by Name or NIC",
+                labelText: AppLocalizations.of(context)!.searchByNameOrNic,
                 prefixIcon: Icon(Icons.search),
                 suffixIcon: IconButton(
                   icon: Icon(Icons.clear),
@@ -118,9 +119,15 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
                   } else if (snapshot.hasError) {
-                    return Center(child: Text("Error: ${snapshot.error}"));
+                    return Center(
+                      child: Text(
+                        "${AppLocalizations.of(context)!.errorSaving('Error')}: ${snapshot.error}",
+                      ),
+                    );
                   } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text("No mothers found"));
+                    return Center(
+                      child: Text(AppLocalizations.of(context)!.noMothersFound),
+                    );
                   }
 
                   final mothers = snapshot.data!;
@@ -153,7 +160,9 @@ class _SelectMotherScreenState extends State<SelectMotherScreen> {
                           trailing: Icon(
                             Icons.arrow_forward_ios,
                             size: 16,
-                            color: theme.iconTheme.color?.withOpacity(0.5),
+                            color: theme.iconTheme.color?.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                           onTap: () => _onMotherSelected(mother),
                         ),

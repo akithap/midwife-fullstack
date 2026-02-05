@@ -63,7 +63,7 @@
             <nav class="nav-links">
                 <a href="home.html" class="nav-link">Home</a>
                 <a href="midwifereg.html" class="nav-link">Midwife Management</a>
-                <a href="leaverequests.html" class="nav-link">Leave Requests</a>
+
                 <a href="moh_reports.html" class="nav-link active">Reports</a>
             </nav>
             <div class="user-menu">
@@ -118,47 +118,50 @@
                 <h3>Top Health Issues</h3>
                 <canvas id="riskBarChart"></canvas>
             </div>
+            <!-- RESTORED: Silent Risk Detector (Aggregated) -->
+            <div class="chart-card">
+                <h3>Silent Risk Detector (Defaulters)</h3>
+                <p style="font-size: 12px; color: grey;">High Risk Mothers missing visits (>30 days)</p>
+                <div id="defaultersList" style="margin-top: 10px; max-height: 200px; overflow-y: auto;">
+                    <p>Loading...</p>
+                </div>
+            </div>
+            <!-- RESTORED: Delivery Forecast (Aggregated) -->
+            <div class="chart-card">
+                <h3>Delivery Forecast (High Risk)</h3>
+                <p style="font-size: 12px; color: grey;">High Risk Deliveries expected in next 30 days</p>
+                <div id="forecastList" style="margin-top: 10px; max-height: 200px; overflow-y: auto;">
+                    <p>Loading...</p>
+                </div>
+            </div>
         </div>
 
         <!-- NEW SECTIONS -->
+        <!-- NEW ANALYTICS SECTION -->
+        <h2 class="section-title">Program Performance Analytics</h2>
         <div class="charts-container">
-            <!-- Silent Risk Detector -->
-            <div class="chart-card" style="overflow-x: auto;">
-                <h3 style="color: #c0392b;">Silent Risk Detector (Defaulters)</h3>
-                <p style="font-size: 12px; color: grey;">High Risk mothers with no clinic visit > 30 days</p>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                    <thead>
-                        <tr style="background: #f8f9fa; text-align: left;">
-                            <th style="padding: 8px;">PHI Area</th>
-                            <th style="padding: 8px;">Defaulter Count</th>
-                        </tr>
-                    </thead>
-                    <tbody id="defaultersTable">
-                        <tr>
-                            <td colspan="2" style="padding: 10px; text-align: center;">Loading...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- 1. Maternal Registration -->
+            <div class="chart-card">
+                <h3>Early Registration (< 8 Weeks)</h3>
+                        <p style="font-size: 12px; color: grey;">Target: 80%</p>
+                        <canvas id="regChart"></canvas>
             </div>
 
-            <!-- Delivery Forecast -->
-            <div class="chart-card" style="overflow-x: auto;">
-                <h3 style="color: #2980b9;">Delivery Forecast (Next 30 Days)</h3>
-                <p style="font-size: 12px; color: grey;">Upcoming High Risk Deliveries (Weekly)</p>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-                    <thead>
-                        <tr style="background: #f8f9fa; text-align: left;">
-                            <th style="padding: 8px;">Week</th>
-                            <th style="padding: 8px;">Expected Deliveries</th>
-                        </tr>
-                    </thead>
-                    <tbody id="forecastTable">
-                        <tr>
-                            <td colspan="2" style="padding: 10px; text-align: center;">Loading...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- 2. Delivery Outcomes -->
+            <div class="chart-card">
+                <h3>Delivery Outcomes</h3>
+                <p style="font-size: 12px; color: grey;">Institutional Deliveries</p>
+                <canvas id="deliveryChart"></canvas>
             </div>
+
+            <!-- 3. Child Nutrition (Birth Weight) -->
+            <div class="chart-card">
+                <h3>Newborn Nutrition</h3>
+                <p style="font-size: 12px; color: grey;">Low Birth Weight (< 2.5kg)</p>
+                        <canvas id="nutritionChart"></canvas>
+            </div>
+
+
         </div>
 
     </main>
@@ -180,38 +183,84 @@
                 const resMe = await fetch('/moh/me', { headers: { 'Authorization': 'Bearer ' + token } });
                 if (resMe.ok) {
                     const me = await resMe.json();
-                    // Use moh_area (which we synced to be Office Name)
                     document.getElementById('mohAreaName').innerText = me.moh_area || "Unknown Area";
                 }
 
-                // 1. General Stats (Converted to Monthly in Backend)
+                // 1. General Stats (Existing)
                 const resStats = await fetch('/reports/stats', { headers: { 'Authorization': 'Bearer ' + token } });
-
-                // 2. Advanced Analytics
-                const resHotspots = await fetch('/moh/analytics/hotspots', { headers: { 'Authorization': 'Bearer ' + token } });
-                const resDefaulters = await fetch('/moh/analytics/defaulters', { headers: { 'Authorization': 'Bearer ' + token } });
-                const resForecast = await fetch('/moh/analytics/forecast', { headers: { 'Authorization': 'Bearer ' + token } });
-
                 if (resStats.status === 401) { logout(); return; }
 
+                // 2. NEW Analytics Endpoints
+                const p1 = fetch('/moh/analytics/registration', { headers: { 'Authorization': 'Bearer ' + token } });
+                const p2 = fetch('/moh/analytics/delivery', { headers: { 'Authorization': 'Bearer ' + token } });
+                const p3 = fetch('/moh/analytics/nutrition', { headers: { 'Authorization': 'Bearer ' + token } });
+
+                const p5 = fetch('/moh/analytics/hotspots', { headers: { 'Authorization': 'Bearer ' + token } });
+                const p6 = fetch('/moh/analytics/defaulters', { headers: { 'Authorization': 'Bearer ' + token } });
+                const p7 = fetch('/moh/analytics/forecast', { headers: { 'Authorization': 'Bearer ' + token } });
+
+                const [resReg, resDel, resNut, resHot, resDef, resFor] = await Promise.all([p1, p2, p3, p5, p6, p7]);
+
                 if (resStats.ok) renderDashboard(await resStats.json());
-                if (resHotspots.ok) renderHotspots(await resHotspots.json());
-                if (resDefaulters.ok) renderDefaulters(await resDefaulters.json());
-                if (resForecast.ok) renderForecast(await resForecast.json());
+                if (resReg.ok) renderRegistrationChart(await resReg.json());
+                if (resDel.ok) renderDeliveryChart(await resDel.json());
+                if (resNut.ok) renderNutritionChart(await resNut.json());
+
+                if (resHot.ok) renderHotspots(await resHot.json());
+                if (resDef.ok) renderDefaulters(await resDef.json());
+                if (resFor.ok) renderForecast(await resFor.json());
 
             } catch (e) {
                 console.error("Error loading reports:", e);
-                document.getElementById('defaultersTable').innerHTML = '<tr><td colspan="2">Failed to load</td></tr>';
             }
+        }
+
+        // ... (renderDashboard, charts stay same) ...
+
+        function renderDefaulters(data) {
+            // Data = [{"area": "Colombo 1", "count": 2}]
+            const container = document.getElementById('defaultersList');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-muted" style="text-align: center;">No defaulters detected.</p>';
+                return;
+            }
+            container.innerHTML = `<table style="width:100%; font-size: 14px;">
+                <thead><tr style="color: grey; text-align: left;"><th>Area</th><th>Count</th></tr></thead>
+                <tbody>
+                ${data.map(d => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 5px 0;">${d.area}</td>
+                        <td style="padding: 5px 0; font-weight: bold; color: #e74c3c;">${d.count}</td>
+                    </tr>
+                `).join('')}
+                </tbody></table>`;
+        }
+
+        function renderForecast(data) {
+            // Data = [{"week": "Week 1", "count": 3}]
+            const container = document.getElementById('forecastList');
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-muted" style="text-align: center;">No high risk deliveries expected soon.</p>';
+                return;
+            }
+            container.innerHTML = `<table style="width:100%; font-size: 14px;">
+                <thead><tr style="color: grey; text-align: left;"><th>Timeline</th><th>Expected</th></tr></thead>
+                <tbody>
+                ${data.map(d => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 5px 0;">${d.week}</td>
+                        <td style="padding: 5px 0; font-weight: bold; color: #2980b9;">${d.count}</td>
+                    </tr>
+                `).join('')}
+                </tbody></table>`;
         }
 
         function renderDashboard(data) {
             document.getElementById('totalActive').innerText = (data.population.pregnant + data.population.postnatal) || 0;
             document.getElementById('totalHighRisk').innerText = data.risks.high || 0;
-            document.getElementById('monthlyDeliveries').innerText = data.weekly.deliveries || 0; // Backend now returns monthly here
-            document.getElementById('monthlyDeliveries').innerText = data.weekly.deliveries || 0; // Backend now returns monthly here
+            document.getElementById('monthlyDeliveries').innerText = data.weekly.deliveries || 0;
 
-            // Existing Risk Factors Chart
+            // Risk Factors Bar Chart (Existing)
             const factors = data.risks.factors;
             new Chart(document.getElementById('riskBarChart').getContext('2d'), {
                 type: 'bar',
@@ -226,8 +275,69 @@
             });
         }
 
+        function renderRegistrationChart(data) {
+            // Pie Chart: Early vs Late Registration
+            const ctx = document.getElementById('regChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Before 8 Weeks', 'After 8 Weeks'],
+                    datasets: [{
+                        data: [data.before_8_weeks, data.after_8_weeks],
+                        backgroundColor: ['#27ae60', '#e74c3c']
+                    }]
+                },
+                options: {
+                    plugins: {
+                        title: { display: true, text: 'Early Registration (< 8 Weeks)' }
+                    }
+                }
+            });
+        }
+
+        function renderDeliveryChart(data) {
+            // Bar/Pie: Normal vs LSCS
+            const ctx = document.getElementById('deliveryChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Normal Vaginal', 'Lower Segment CS (LSCS)', 'Other'],
+                    datasets: [{
+                        data: [data.normal, data.cs, data.other],
+                        backgroundColor: ['#2ecc71', '#e67e22', '#95a5a6']
+                    }]
+                },
+                options: {
+                    plugins: {
+                        title: { display: true, text: 'Institutional Delivery Outcomes' }
+                    }
+                }
+            });
+        }
+
+        function renderNutritionChart(data) {
+            // Doughnut: Low Birth Weight
+            const ctx = document.getElementById('nutritionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Normal Weight (>2.5kg)', 'Low Birth Weight (<2.5kg)'],
+                    datasets: [{
+                        data: [data.normal_weight, data.low_weight],
+                        backgroundColor: ['#3498db', '#c0392b']
+                    }]
+                },
+                options: {
+                    plugins: {
+                        title: { display: true, text: 'Newborn Nutrition (Birth Weight)' }
+                    }
+                }
+            });
+        }
+
+
+
         function renderHotspots(data) {
-            // data = [{area: "A", count: 5}, ...]
             const labels = data.map(d => d.area);
             const counts = data.map(d => d.count);
 
@@ -241,21 +351,6 @@
                     }]
                 }
             });
-        }
-
-        function renderDefaulters(data) {
-            // Data = [{area: "Kadawatha", count: 5}]
-            const tbody = document.getElementById('defaultersTable');
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:10px;">No defaulters found. Good!</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.map(d => `
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 8px;">${d.area}</td>
-                    <td style="padding: 8px; color: red; font-weight: bold;">${d.count} Mothers</td>
-                </tr>
-            `).join('');
         }
 
         function renderForecast(data) {
