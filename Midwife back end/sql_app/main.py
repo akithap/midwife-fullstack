@@ -154,7 +154,8 @@ def seed_database_via_web():
         db.commit()
         db.close()
         html_log += "</ul><h3>SUCCESS: Database Seeded!</h3>"
-        return fastapi.responses.HTMLResponse(content=html_log)
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=html_log)
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
