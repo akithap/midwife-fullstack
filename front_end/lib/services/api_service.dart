@@ -28,7 +28,7 @@ class ApiService {
   static String get _baseUrl {
     if (kIsWeb) {
       if (kReleaseMode) {
-        return 'https://midwife-website-hazel.vercel.app';
+        return 'https://midwife-backend-delta.vercel.app';
       }
       return 'http://127.0.0.1:8000';
     } else {
