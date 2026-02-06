@@ -150,6 +150,28 @@ def seed_database_via_web():
                 html_log += f"<li>Created Midwife: {m['user']}</li>"
             else:
                 html_log += f"<li>Midwife exists: {m['user']}</li>"
+
+        # 4. Mother (Linked to first midwife)
+        test_mother_nic = "123456789V"
+        mother = db.query(models.Mother).filter(models.Mother.nic == test_mother_nic).first()
+        mw_1 = db.query(models.Midwife).filter(models.Midwife.username == "mw_colombo_1").first()
+        
+        if not mother and mw_1:
+            hashed_pw = get_hash("123")
+            new_mother = models.Mother(
+                full_name="Test Mother (Sita)",
+                nic=test_mother_nic,
+                hashed_password=hashed_pw,
+                midwife_id=mw_1.id,
+                contact_number="0771234567",
+                address="123, Galle Road, Colombo",
+                status="Pregnant",
+                created_at=datetime.utcnow()
+            )
+            db.add(new_mother)
+            html_log += f"<li>Created Mother: {test_mother_nic}</li>"
+        else:
+            html_log += f"<li>Mother exists or Midwife missing: {test_mother_nic}</li>"
         
         db.commit()
         db.close()
