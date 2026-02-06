@@ -98,6 +98,66 @@ def setup_admin_user(db: Session = Depends(get_db)):
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme_mother = OAuth2PasswordBearer(tokenUrl="mother/token")
+
+# --- NO-TERMINAL SEEDING ENDPOINT ---
+@app.get("/seed_db")
+def seed_database_via_web():
+    try:
+        from . import database, models
+        from passlib.context import CryptContext
+        from sqlalchemy import text
+        
+        # 1. Init DB
+        models.Base.metadata.create_all(bind=database.engine)
+        db = database.SessionLocal()
+        
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        def get_hash(p): return pwd_context.hash(p)
+
+        html_log = "<h2>Seeding Log</h2><ul>"
+
+        # 2. Office
+        office_name = "Colombo MC District 1"
+        office = db.query(models.MOHOffice).filter(models.MOHOffice.name == office_name).first()
+        if not office:
+            office = models.MOHOffice(name=office_name, district="Colombo", province="Western Province")
+            db.add(office)
+            db.commit()
+            db.refresh(office)
+            html_log += f"<li>Created Office: {office_name}</li>"
+        else:
+            html_log += f"<li>Office exists: {office_name}</li>"
+
+        # 3. Midwives
+        midwives = [
+            {"user": "mw_colombo_1", "name": "Sister Anne (Col 1)", "pass": "123"},
+            {"user": "mw_colombo_2", "name": "Sister Kate (Col 1)", "pass": "123"}
+        ]
+        
+        for m in midwives:
+            mw = db.query(models.Midwife).filter(models.Midwife.username == m['user']).first()
+            if not mw:
+                new_mw = models.Midwife(
+                    username=m['user'],
+                    hashed_password=get_hash(m['pass']),
+                    full_name=m['name'],
+                    assigned_moh_area=office_name,
+                    moh_office_id=office.id,
+                    is_active=True,
+                    created_at=datetime.utcnow()
+                )
+                db.add(new_mw)
+                html_log += f"<li>Created Midwife: {m['user']}</li>"
+            else:
+                html_log += f"<li>Midwife exists: {m['user']}</li>"
+        
+        db.commit()
+        db.close()
+        html_log += "</ul><h3>SUCCESS: Database Seeded!</h3>"
+        return fastapi.responses.HTMLResponse(content=html_log)
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 oauth2_scheme_moh = OAuth2PasswordBearer(tokenUrl="moh/token") # MOH Web Portal (NEW)
 
 # --- Auth Functions (Same as before) ---
